@@ -79,4 +79,4 @@ var_dump(
 
 ## License
 
-The package is licensed under the MIT license. See [License File](https://github.com/borschphp/container/blob/master/LICENSE.md) for more information.
+The package is licensed under the MIT license. See [License File](https://github.com/borschphp/borsch-container/blob/master/LICENSE.md) for more information.
