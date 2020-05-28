@@ -101,4 +101,20 @@ class ContainerTest extends TestCase
             'something in something'
         );
     }
+
+    public function testGetContainerInstanceWithContainerInterfaceIdentifier()
+    {
+        $container = new \Borsch\Container\Container();
+        $container->set(\Assets\Bar::class);
+
+        $this->assertInstanceOf(
+            Psr\Container\ContainerInterface::class,
+            $container->get(Psr\Container\ContainerInterface::class)
+        );
+
+        $this->assertSame(
+            $container->get(Psr\Container\ContainerInterface::class),
+            $container
+        );
+    }
 }

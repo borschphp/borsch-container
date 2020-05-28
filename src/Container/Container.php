@@ -36,6 +36,10 @@ class Container implements ContainerInterface
             return $this->cache[$id];
         }
 
+        if ($id == ContainerInterface::class && !$this->has(ContainerInterface::class)) {
+            return $this;
+        }
+
         $definition = $this->definitions[$id] ?? $this->set($id);
         $item = $definition->setContainer($this)->get();
 

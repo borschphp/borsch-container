@@ -2,6 +2,7 @@
 
 [![Build Status](https://travis-ci.com/borschphp/borsch-container.svg?branch=master)](https://travis-ci.com/borschphp/borsch-container)
 [![Latest Stable Version](https://poser.pugx.org/borschphp/container/v)](//packagist.org/packages/borschphp/container)
+[![License](https://poser.pugx.org/borschphp/container/license)](//packagist.org/packages/borschphp/container)
 
 A simple and fast PSR-11 Container implementation.
 
