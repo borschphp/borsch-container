@@ -116,5 +116,9 @@ class ContainerTest extends TestCase
             $container->get(Psr\Container\ContainerInterface::class),
             $container
         );
+
+        $this->assertTrue(
+            $container->get(Psr\Container\ContainerInterface::class)->has(\Assets\Bar::class)
+        );
     }
 }

@@ -23,6 +23,17 @@ class Container implements ContainerInterface
     protected $cache = [];
 
     /**
+     * Container constructor.
+     */
+    public function __construct()
+    {
+        $instance = &$this;
+        $this->set(ContainerInterface::class, function () use ($instance) {
+            return $instance;
+        })->cache(true);
+    }
+
+    /**
      * Finds an entry of the container by its identifier and returns it.
      *
      * @param string $id
@@ -34,10 +45,6 @@ class Container implements ContainerInterface
     {
         if (isset($this->cache[$id])) {
             return $this->cache[$id];
-        }
-
-        if ($id == ContainerInterface::class && !$this->has(ContainerInterface::class)) {
-            return $this;
         }
 
         $definition = $this->definitions[$id] ?? $this->set($id);
