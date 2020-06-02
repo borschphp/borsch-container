@@ -3,7 +3,7 @@
  * @author debuss-a
  */
 
-namespace Assets;
+namespace BorschTest\Assets;
 
 class Bar
 {

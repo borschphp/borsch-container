@@ -8,6 +8,7 @@ namespace Borsch\Container;
 use Psr\Container\ContainerInterface;
 use ReflectionClass;
 use ReflectionException;
+use ReflectionFunction;
 
 /**
  * Class Definition
@@ -107,11 +108,19 @@ class Definition
      */
     public function get()
     {
-        if (($this->id == $this->concrete && is_callable($this->concrete)) ||
-            is_callable($this->concrete)) {
-            return ($this->concrete)();
+        if (($this->id == $this->concrete && is_callable($this->concrete)) || is_callable($this->concrete)) {
+            return $this->invokeAsCallable();
         }
 
+        return $this->invokeAsClass();
+    }
+
+    /**
+     * @return object
+     * @throws NotFoundException
+     */
+    protected function invokeAsClass()
+    {
         try {
             $item = new ReflectionClass($this->concrete);
         } catch (ReflectionException $e) {
@@ -149,5 +158,37 @@ class Definition
         }
 
         return $object;
+    }
+
+    /**
+     * @return mixed
+     * @throws NotFoundException
+     */
+    protected function invokeAsCallable()
+    {
+        try {
+            $fnctn = new ReflectionFunction($this->concrete);
+        } catch (ReflectionException $e) {
+            throw new NotFoundException(
+                sprintf('Unable to find the entry "%s".', $this->concrete),
+                $e->getCode(),
+                $e
+            );
+        }
+
+        if (!$fnctn->getNumberOfParameters()) {
+            return $fnctn->invoke();
+        }
+
+        if (!count($this->parameters)) {
+            foreach ($fnctn->getParameters() as $param) {
+                $type = $param->getType();
+                if ($type) {
+                    $this->parameters[] = $this->container->get($type->getName());
+                }
+            }
+        }
+
+        return $fnctn->invokeArgs($this->parameters);
     }
 }

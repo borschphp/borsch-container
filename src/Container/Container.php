@@ -28,6 +28,7 @@ class Container implements ContainerInterface
     public function __construct()
     {
         $instance = &$this;
+
         $this->set(ContainerInterface::class, function () use ($instance) {
             return $instance;
         })->cache(true);

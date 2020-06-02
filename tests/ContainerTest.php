@@ -1,18 +1,22 @@
 <?php
 
+namespace BorschTest;
+
 require_once __DIR__.'/../vendor/autoload.php';
 
+use BorschTest\Assets\Bar;
+use BorschTest\Assets\Foo;
+use Borsch\Container\Container;
+use Borsch\Container\NotFoundException;
 use PHPUnit\Framework\TestCase;
-
-require_once __DIR__.'/Assets/Foo.php';
-require_once __DIR__.'/Assets/Bar.php';
+use Psr\Container\ContainerInterface;
 
 class ContainerTest extends TestCase
 {
 
     public function testClosureResolution()
     {
-        $container = new \Borsch\Container\Container();
+        $container = new Container();
         $container->set('closure', function () {
             return 'closure';
         });
@@ -20,51 +24,102 @@ class ContainerTest extends TestCase
         $this->assertSame($container->get('closure'), 'closure');
     }
 
-    public function testClassResolution()
+    public function testClosureResolutionWithAddedParameters()
     {
-        $container = new \Borsch\Container\Container();
-        $container->set(\Assets\Bar::class);
+        $container = new Container();
+        $container->set('closure', function ($text) {
+            return $text;
+        })->addParameter('closure');
+
+        $this->assertSame($container->get('closure'), 'closure');
+    }
+
+    public function testClosureResolutionWithAutoWiredParameters()
+    {
+        $container = new Container();
+        $container->set(Bar::class);
+        $container->set('closure', function (Bar $bar) {
+            return $bar;
+        });
 
         $this->assertInstanceOf(
-            \Assets\Bar::class,
-            $container->get(\Assets\Bar::class)
+            Bar::class,
+            $container->get('closure')
+        );
+    }
+
+    public function testClassResolution()
+    {
+        $container = new Container();
+        $container->set(Bar::class);
+
+        $this->assertInstanceOf(
+            Bar::class,
+            $container->get(Bar::class)
+        );
+    }
+
+    public function testClassResolutionWithAddedParameters()
+    {
+        $container = new Container();
+        $container->set(Foo::class)->addParameter(new Bar());
+
+        $this->assertInstanceOf(
+            Bar::class,
+            $container->get(Foo::class)->bar
+        );
+    }
+
+    public function testClassResolutionWithAutoWiredParameters()
+    {
+        $container = new Container();
+        $container->set(Bar::class);
+        $container->set(Foo::class);
+
+        $this->assertInstanceOf(
+            Bar::class,
+            $container->get(Foo::class)->bar
         );
     }
 
     public function testCannotGetValueFromInvalidKey()
     {
-        $this->expectException(\Borsch\Container\NotFoundException::class);
+        $this->expectException(NotFoundException::class);
 
-        $container = new \Borsch\Container\Container();
+        $container = new Container();
         $container->set('invalid key');
         $container->get('invalid key');
     }
 
     public function testAutoWiring()
     {
-        $container = new \Borsch\Container\Container();
-        $container->set(\Assets\Foo::class);
+        $container = new Container();
+        $container->set(Foo::class);
 
-        $this->assertTrue(
-            $container->get(\Assets\Foo::class) instanceof \Assets\Foo &&
-            $container->get(\Assets\Foo::class)->bar instanceof \Assets\Bar
+        $this->assertInstanceOf(
+            Foo::class,
+            $container->get(Foo::class)
+        );
+        $this->assertInstanceOf(
+            Bar::class,
+            $container->get(Foo::class)->bar
         );
     }
 
     public function testCachedClass()
     {
-        $container = new \Borsch\Container\Container();
-        $container->set(\Assets\Bar::class)->cache(true);
+        $container = new Container();
+        $container->set(Bar::class)->cache(true);
 
-        $object1 = $container->get(\Assets\Bar::class);
-        $object2 = $container->get(\Assets\Bar::class);
+        $object1 = $container->get(Bar::class);
+        $object2 = $container->get(Bar::class);
 
         $this->assertSame($object1, $object2);
     }
 
     public function testCachedClosure()
     {
-        $container = new \Borsch\Container\Container();
+        $container = new Container();
         $container->set('test', function() {
             return 42;
         })->cache(true);
@@ -77,19 +132,19 @@ class ContainerTest extends TestCase
 
     public function testClassDefinitionWithArgs()
     {
-        $container = new \Borsch\Container\Container();
-        $container->set(\Assets\Foo::class)->addParameter(new \Assets\Bar());
+        $container = new Container();
+        $container->set(Foo::class)->addParameter(new Bar());
 
         $this->assertInstanceOf(
-            \Assets\Foo::class,
-            $container->get(\Assets\Foo::class)
+            Foo::class,
+            $container->get(Foo::class)
         );
     }
 
     public function testClassDefinitionWithMethodCall()
     {
-        $container = new \Borsch\Container\Container();
-        $container->set(\Assets\Bar::class)->addMethod(
+        $container = new Container();
+        $container->set(Bar::class)->addMethod(
             'setSomething',
             [
                 'something in something'
@@ -97,28 +152,28 @@ class ContainerTest extends TestCase
         );
 
         $this->assertSame(
-            $container->get(\Assets\Bar::class)->something,
+            $container->get(Bar::class)->something,
             'something in something'
         );
     }
 
     public function testGetContainerInstanceWithContainerInterfaceIdentifier()
     {
-        $container = new \Borsch\Container\Container();
-        $container->set(\Assets\Bar::class);
+        $container = new Container();
+        $container->set(Bar::class);
 
         $this->assertInstanceOf(
-            Psr\Container\ContainerInterface::class,
-            $container->get(Psr\Container\ContainerInterface::class)
+            ContainerInterface::class,
+            $container->get(ContainerInterface::class)
         );
 
         $this->assertSame(
-            $container->get(Psr\Container\ContainerInterface::class),
+            $container->get(ContainerInterface::class),
             $container
         );
 
         $this->assertTrue(
-            $container->get(Psr\Container\ContainerInterface::class)->has(\Assets\Bar::class)
+            $container->get(ContainerInterface::class)->has(Bar::class)
         );
     }
 }
