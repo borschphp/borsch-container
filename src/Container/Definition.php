@@ -118,6 +118,7 @@ class Definition
     /**
      * @return object
      * @throws NotFoundException
+     * @throws ReflectionException
      */
     protected function invokeAsClass()
     {
@@ -125,7 +126,7 @@ class Definition
             $item = new ReflectionClass($this->concrete);
         } catch (ReflectionException $e) {
             throw new NotFoundException(
-                sprintf('Unable to find the entry "%s".', $this->concrete),
+                sprintf('Unable to find the entry "%s" for definition "%s".', $this->concrete, $this->id),
                 $e->getCode(),
                 $e
             );
@@ -137,9 +138,14 @@ class Definition
         } else {
             if (!count($this->parameters)) {
                 foreach ($constructor->getParameters() as $param) {
-                    $type = $param->getType();
-                    if ($type) {
-                        $this->parameters[] = $this->container->get($type->getName());
+                    $type = $param->getType()->getName();
+
+                    if ($type && (class_exists($type) || $this->container->has($type))) {
+                        $this->parameters[] = $this->container->get($type);
+                    } elseif ($param->isOptional() && $param->isDefaultValueAvailable()) {
+                        $this->parameters[] = $param->getDefaultValue();
+                    } else {
+                        $this->parameters[] = null;
                     }
                 }
             }

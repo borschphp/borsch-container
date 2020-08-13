@@ -5,6 +5,7 @@ namespace BorschTest;
 require_once __DIR__.'/../vendor/autoload.php';
 
 use BorschTest\Assets\Bar;
+use BorschTest\Assets\Baz;
 use BorschTest\Assets\Foo;
 use Borsch\Container\Container;
 use Borsch\Container\NotFoundException;
@@ -103,6 +104,41 @@ class ContainerTest extends TestCase
         $this->assertInstanceOf(
             Bar::class,
             $container->get(Foo::class)->bar
+        );
+    }
+
+    public function testClassConstructorWithOptionalParameters()
+    {
+        $container = new Container();
+        $container->set(Baz::class);
+
+        $this->assertInstanceOf(
+            Baz::class,
+            $container->get(Baz::class)
+        );
+        $this->assertEquals(
+            'one',
+            $container->get(Baz::class)->getValues()[1]
+        );
+    }
+
+    public function testClassConstructorWithOptionalAddedParameters()
+    {
+        $container = new Container();
+        $container->set(Baz::class)->addParameter([
+            'zero',
+            'un',
+            'deux',
+            'trois'
+        ]);
+
+        $this->assertInstanceOf(
+            Baz::class,
+            $container->get(Baz::class)
+        );
+        $this->assertEquals(
+            'un',
+            $container->get(Baz::class)->getValues()[1]
         );
     }
 
