@@ -9,6 +9,7 @@ use Psr\Container\ContainerInterface;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionFunction;
+use ReflectionMethod;
 
 /**
  * Class Definition
@@ -105,6 +106,7 @@ class Definition
     /**
      * @return mixed
      * @throws NotFoundException
+     * @throws ReflectionException
      */
     public function get()
     {
@@ -120,7 +122,7 @@ class Definition
      * @throws NotFoundException
      * @throws ReflectionException
      */
-    protected function invokeAsClass()
+    protected function invokeAsClass(): object
     {
         try {
             $item = new ReflectionClass($this->concrete);
@@ -133,26 +135,21 @@ class Definition
         }
 
         $constructor = $item->getConstructor();
-        if (is_null($constructor)) {
-            $object = $item->newInstance();
-        } else {
-            if (!count($this->parameters)) {
-                foreach ($constructor->getParameters() as $param) {
-                    $type = $param->getType()->getName();
+        $object = is_null($constructor) ?
+            $item->newInstance() :
+            $this->getNewInstanceWithArgs($constructor, $item);
 
-                    if ($type && (class_exists($type) || $this->container->has($type))) {
-                        $this->parameters[] = $this->container->get($type);
-                    } elseif ($param->isOptional() && $param->isDefaultValueAvailable()) {
-                        $this->parameters[] = $param->getDefaultValue();
-                    } else {
-                        $this->parameters[] = null;
-                    }
-                }
-            }
+        $this->callObjectMethods($object);
 
-            $object = $item->newInstanceArgs($this->parameters);
-        }
+        return $object;
+    }
 
+    /**
+     * @param object $object
+     * @return void
+     */
+    protected function callObjectMethods(object $object): void
+    {
         foreach ($this->methods as $method) {
             foreach ($method[1] as $key => $value) {
                 if (is_string($value) && $this->container->has($value)) {
@@ -162,8 +159,31 @@ class Definition
 
             call_user_func_array([$object, $method[0]], $method[1]);
         }
+    }
 
-        return $object;
+    /**
+     * @param ReflectionMethod $constructor
+     * @param ReflectionClass $item
+     * @return object
+     * @throws ReflectionException
+     */
+    protected function getNewInstanceWithArgs(ReflectionMethod $constructor, ReflectionClass $item): object
+    {
+        if (!count($this->parameters)) {
+            foreach ($constructor->getParameters() as $param) {
+                $type = $param->getType()->getName();
+
+                if ($type && (class_exists($type) || $this->container->has($type))) {
+                    $this->parameters[] = $this->container->get($type);
+                } elseif ($param->isOptional() && $param->isDefaultValueAvailable()) {
+                    $this->parameters[] = $param->getDefaultValue();
+                } else {
+                    $this->parameters[] = null;
+                }
+            }
+        }
+
+        return $item->newInstanceArgs($this->parameters);
     }
 
     /**
