@@ -10,6 +10,7 @@ use ReflectionClass;
 use ReflectionException;
 use ReflectionFunction;
 use ReflectionMethod;
+use ReflectionParameter;
 
 /**
  * Class Definition
@@ -77,9 +78,9 @@ class Definition
      * @param ContainerInterface $container
      * @return $this
      */
-    public function setContainer(ContainerInterface $container): Definition
+    public function setContainer(ContainerInterface &$container): Definition
     {
-        $this->container = $container;
+        $this->container = &$container;
 
         return $this;
     }
@@ -170,20 +171,42 @@ class Definition
     protected function getNewInstanceWithArgs(ReflectionMethod $constructor, ReflectionClass $item): object
     {
         if (!count($this->parameters)) {
-            foreach ($constructor->getParameters() as $param) {
-                $type = $param->getType()->getName();
-
-                if ($type && (class_exists($type) || $this->container->has($type))) {
-                    $this->parameters[] = $this->container->get($type);
-                } elseif ($param->isOptional() && $param->isDefaultValueAvailable()) {
-                    $this->parameters[] = $param->getDefaultValue();
-                } else {
-                    $this->parameters[] = null;
-                }
-            }
+            $this->parameters = $this->getNewInstanceParameters($constructor);
         }
 
         return $item->newInstanceArgs($this->parameters);
+    }
+
+    /**
+     * @param ReflectionMethod $constructor
+     * @return array
+     * @throws ReflectionException
+     */
+    protected function getNewInstanceParameters(ReflectionMethod $constructor): array
+    {
+        return array_reduce($constructor->getParameters(), function(array $parameters, ReflectionParameter $reflection_parameter) {
+            $parameter = null;
+
+            $type = $reflection_parameter->getType()->getName() ?? null;
+            if ($this->containerHasOrCanRetrieve($type)) {
+                $parameter = $this->container->get($type);
+            } elseif ($reflection_parameter->isOptional() && $reflection_parameter->isDefaultValueAvailable()) {
+                $parameter = $reflection_parameter->getDefaultValue();
+            }
+
+            $parameters[] = $parameter;
+
+            return $parameters;
+        }, []);
+    }
+
+    /**
+     * @param null|string $id
+     * @return bool
+     */
+    protected function containerHasOrCanRetrieve(?string $id = null): bool
+    {
+        return $id && (class_exists($id) || $this->container->has($id));
     }
 
     /**
