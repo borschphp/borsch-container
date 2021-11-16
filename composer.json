@@ -2,6 +2,7 @@
   "name": "borschphp/container",
   "description": "A simple PSR-11 Container implementation.",
   "license": "MIT",
+  "keywords": ["psr", "psr-11", "container"],
   "authors": [
     {
       "name": "Alexandre DEBUSSCHERE",
