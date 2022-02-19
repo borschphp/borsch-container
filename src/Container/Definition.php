@@ -5,7 +5,9 @@
 
 namespace Borsch\Container;
 
+use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
+use Psr\Container\NotFoundExceptionInterface;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionFunction;
@@ -33,9 +35,6 @@ class Definition
 
     /** @var array */
     protected $methods = [];
-
-    /** @var mixed */
-    protected $resolved;
 
     /** @var ContainerInterface */
     protected $container;
@@ -106,7 +105,9 @@ class Definition
 
     /**
      * @return mixed
+     * @throws ContainerExceptionInterface
      * @throws NotFoundException
+     * @throws NotFoundExceptionInterface
      * @throws ReflectionException
      */
     public function get()
@@ -120,7 +121,9 @@ class Definition
 
     /**
      * @return object
+     * @throws ContainerExceptionInterface
      * @throws NotFoundException
+     * @throws NotFoundExceptionInterface
      * @throws ReflectionException
      */
     protected function invokeAsClass(): object
@@ -148,6 +151,8 @@ class Definition
     /**
      * @param object $object
      * @return void
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
      */
     protected function callObjectMethods(object $object): void
     {
@@ -166,6 +171,8 @@ class Definition
      * @param ReflectionMethod $constructor
      * @param ReflectionClass $item
      * @return object
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
      * @throws ReflectionException
      */
     protected function getNewInstanceWithArgs(ReflectionMethod $constructor, ReflectionClass $item): object
@@ -180,6 +187,8 @@ class Definition
     /**
      * @param ReflectionMethod $constructor
      * @return array
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
      * @throws ReflectionException
      */
     protected function getNewInstanceParameters(ReflectionMethod $constructor): array
@@ -212,6 +221,8 @@ class Definition
     /**
      * @return mixed
      * @throws NotFoundException
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
      */
     protected function invokeAsCallable()
     {

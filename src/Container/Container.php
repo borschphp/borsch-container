@@ -42,7 +42,7 @@ class Container implements ContainerInterface
      * @throws NotFoundExceptionInterface
      * @throws ContainerExceptionInterface
      */
-    public function get($id)
+    public function get(string $id)
     {
         if (isset($this->cache[$id])) {
             return $this->cache[$id];
@@ -68,7 +68,7 @@ class Container implements ContainerInterface
      * @param string $id
      * @return bool
      */
-    public function has($id)
+    public function has(string $id): bool
     {
         return isset($this->definitions[$id]);
     }
