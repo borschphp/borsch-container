@@ -5,9 +5,12 @@
 
 namespace Borsch\Container;
 
-use Psr\Container\ContainerExceptionInterface;
-use Psr\Container\ContainerInterface;
-use Psr\Container\NotFoundExceptionInterface;
+use Psr\Container\{
+    ContainerExceptionInterface,
+    ContainerInterface,
+    NotFoundExceptionInterface
+};
+use ReflectionException;
 
 /**
  * Class Container
@@ -16,22 +19,17 @@ use Psr\Container\NotFoundExceptionInterface;
 class Container implements ContainerInterface
 {
 
-    /** @var Definition[] */
-    protected $definitions = [];
-
-    /** @var array */
-    protected $cache = [];
-
     /**
      * Container constructor.
      */
-    public function __construct()
-    {
-        $instance = &$this;
-
-        $this->set(ContainerInterface::class, function () use ($instance) {
-            return $instance;
-        })->cache(true);
+    public function __construct(
+        /** @var Definition[] */
+        protected array $definitions = [],
+        protected array $cache = []
+    ) {
+        $this
+            ->set(ContainerInterface::class, fn() => $this)
+            ->cache(true);
     }
 
     /**
@@ -41,8 +39,9 @@ class Container implements ContainerInterface
      * @return mixed
      * @throws NotFoundExceptionInterface
      * @throws ContainerExceptionInterface
+     * @throws ReflectionException
      */
-    public function get(string $id)
+    public function get(string $id): mixed
     {
         if (isset($this->cache[$id])) {
             return $this->cache[$id];
@@ -78,7 +77,7 @@ class Container implements ContainerInterface
      * @param mixed|null $definition
      * @return Definition
      */
-    public function set(string $id, $definition = null): Definition
+    public function set(string $id, mixed $definition = null): Definition
     {
         $this->definitions[$id] = new Definition($id, $definition);
 

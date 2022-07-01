@@ -5,9 +5,11 @@
 
 namespace Borsch\Container;
 
-use Psr\Container\ContainerExceptionInterface;
-use Psr\Container\ContainerInterface;
-use Psr\Container\NotFoundExceptionInterface;
+use Psr\Container\{
+    ContainerExceptionInterface,
+    ContainerInterface,
+    NotFoundExceptionInterface
+};
 use ReflectionClass;
 use ReflectionException;
 use ReflectionFunction;
@@ -21,32 +23,23 @@ use ReflectionParameter;
 class Definition
 {
 
-    /** @var string */
-    protected $id;
-
-    /** @var mixed */
-    protected $concrete;
-
-    /** @var bool */
-    protected $cached = false;
-
-    /** @var array */
-    protected $parameters = [];
-
-    /** @var array */
-    protected $methods = [];
-
-    /** @var ContainerInterface */
-    protected $container;
-
     /**
      * Definition constructor.
      * @param string $id
-     * @param mixed|null $concrete
+     * @param mixed $concrete
+     * @param bool $cached
+     * @param array $parameters
+     * @param array $methods
+     * @param ContainerInterface|null $container
      */
-    public function __construct(string $id, $concrete = null)
-    {
-        $this->id = $id;
+    public function __construct(
+        protected string $id,
+        protected mixed $concrete = null,
+        protected bool $cached = false,
+        protected array $parameters = [],
+        protected array $methods = [],
+        protected ?ContainerInterface $container = null
+    ) {
         $this->concrete = $concrete ?: $id;
     }
 
@@ -54,7 +47,7 @@ class Definition
      * @param mixed $value
      * @return Definition
      */
-    public function addParameter($value): Definition
+    public function addParameter(mixed $value): self
     {
         $this->parameters[] = $value;
 
@@ -66,7 +59,7 @@ class Definition
      * @param array $arguments
      * @return $this
      */
-    public function addMethod(string $name, array $arguments = []): Definition
+    public function addMethod(string $name, array $arguments = []): self
     {
         $this->methods[] = [$name, $arguments];
 
@@ -77,7 +70,7 @@ class Definition
      * @param ContainerInterface $container
      * @return $this
      */
-    public function setContainer(ContainerInterface &$container): Definition
+    public function setContainer(ContainerInterface &$container): self
     {
         $this->container = &$container;
 
@@ -88,7 +81,7 @@ class Definition
      * @param bool $cached
      * @return $this
      */
-    public function cache(bool $cached): Definition
+    public function cache(bool $cached): self
     {
         $this->cached = $cached;
 
@@ -110,7 +103,7 @@ class Definition
      * @throws NotFoundExceptionInterface
      * @throws ReflectionException
      */
-    public function get()
+    public function get(): mixed
     {
         if (($this->id == $this->concrete && is_callable($this->concrete)) || is_callable($this->concrete)) {
             return $this->invokeAsCallable();
@@ -130,11 +123,11 @@ class Definition
     {
         try {
             $item = new ReflectionClass($this->concrete);
-        } catch (ReflectionException $e) {
+        } catch (ReflectionException $exception) {
             throw new NotFoundException(
                 sprintf('Unable to find the entry "%s" for definition "%s".', $this->concrete, $this->id),
-                $e->getCode(),
-                $e
+                $exception->getCode(),
+                $exception
             );
         }
 
@@ -196,7 +189,7 @@ class Definition
         return array_reduce($constructor->getParameters(), function(array $parameters, ReflectionParameter $reflection_parameter) {
             $parameter = null;
 
-            $type = $reflection_parameter->getType()->getName() ?? null;
+            $type = $reflection_parameter?->getType()?->getName();
             if ($this->containerHasOrCanRetrieve($type)) {
                 $parameter = $this->container->get($type);
             } elseif ($reflection_parameter->isOptional() && $reflection_parameter->isDefaultValueAvailable()) {
@@ -224,24 +217,24 @@ class Definition
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface
      */
-    protected function invokeAsCallable()
+    protected function invokeAsCallable(): mixed
     {
         try {
-            $fnctn = new ReflectionFunction($this->concrete);
-        } catch (ReflectionException $e) {
+            $function = new ReflectionFunction($this->concrete);
+        } catch (ReflectionException $exception) {
             throw new NotFoundException(
                 sprintf('Unable to find the entry "%s".', $this->concrete),
-                $e->getCode(),
-                $e
+                $exception->getCode(),
+                $exception
             );
         }
 
-        if (!$fnctn->getNumberOfParameters()) {
-            return $fnctn->invoke();
+        if (!$function->getNumberOfParameters()) {
+            return $function->invoke();
         }
 
         if (!count($this->parameters)) {
-            foreach ($fnctn->getParameters() as $param) {
+            foreach ($function->getParameters() as $param) {
                 $type = $param->getType();
                 if ($type) {
                     $this->parameters[] = $this->container->get($type->getName());
@@ -249,6 +242,6 @@ class Definition
             }
         }
 
-        return $fnctn->invokeArgs($this->parameters);
+        return $function->invokeArgs($this->parameters);
     }
 }
