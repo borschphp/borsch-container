@@ -1,6 +1,6 @@
 # Borsch Container
 
-[![Build Status](https://travis-ci.com/borschphp/borsch-container.svg?branch=master)](https://travis-ci.com/borschphp/borsch-container)
+[![Build](https://github.com/borschphp/borsch-container/actions/workflows/php.yml/badge.svg)](https://github.com/borschphp/borsch-container/actions/workflows/php.yml)
 [![Latest Stable Version](https://poser.pugx.org/borschphp/container/v)](//packagist.org/packages/borschphp/container)
 [![License](https://poser.pugx.org/borschphp/container/license)](//packagist.org/packages/borschphp/container)
 
