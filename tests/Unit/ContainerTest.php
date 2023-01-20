@@ -1,10 +1,31 @@
 <?php
 
-use Borsch\Container\NotFoundException;
-use BorschTest\Assets\Bar;
-use BorschTest\Assets\Baz;
-use BorschTest\Assets\Foo;
+use Borsch\Container\{Container, Definition, Exception\ContainerException, Exception\NotFoundException};
+use BorschTest\Assets\{Bar, Baz, Foo};
 use Psr\Container\ContainerInterface;
+
+test('has ID in container', function () {
+    $id = substr(md5(mt_rand()), 0, 7);
+    $this->container->set($id, fn() => 42);
+    expect($this->container->has($id))->toBeTrue();
+});
+
+test('does not have ID in container', function () {
+    expect($this->container->has('nonExistingId'))->toBeFalse();
+});
+
+test('has ID in a delegated container', function () {
+    $id = substr(md5(mt_rand()), 0, 7);
+    $container = new Container();
+    $container->set($id, fn() => 42);
+    $this->container->delegate($container);
+    expect($this->container->has($id))->toBeTrue();
+});
+
+test('does not have ID in delegated container', function () {
+    $this->container->delegate(new Container());
+    expect($this->container->has('nonExistingId'))->toBeFalse();
+});
 
 test('closure resolution', function () {
     $this->container->set('closure', fn() => 'closure');
@@ -42,10 +63,37 @@ test('class resolution with autowired parameters', function () {
     )->toBeInstanceOf(Bar::class);
 });
 
-it('throws exception when trying to get value from invalid key', function () {
-    $this->container->set('invalid key');
-    $this->container->get('invalid key');
-})->throws(NotFoundException::class);
+it('gets scalar values', function () {
+    $integer = rand(1, 100);
+    $float = rand(1, 100) / 100;
+    $string = substr(md5(mt_rand()), 0, 7);
+    $true = true;
+    $false = false;
+    $this->container->set('integer', $integer);
+    $this->container->set('float', $float);
+    $this->container->set('string', $string);
+    $this->container->set('true', $true);
+    $this->container->set('false', $false);
+    expect($this->container->get('integer'))->toBe($integer)
+        ->and($this->container->get('float'))->toBe($float)
+        ->and($this->container->get('string'))->toBe($string)
+        ->and($this->container->get('true'))->toBeTrue()
+        ->and($this->container->get('false'))->toBeFalse();
+});
+
+it('gets array, object and resource values', function () {
+    $array = [1, 2, 3, 'toto'];
+    $object = new stdClass();
+    $object->random = substr(md5(mt_rand()), 0, 7);
+    $resource = fopen('php://temp', 'r');
+    $this->container->set('array', $array);
+    $this->container->set('object', $object);
+    $this->container->set('resource', $resource);
+    expect($this->container->get('array'))->toBe($array)
+        ->and($this->container->get('object'))->toBe($object)
+        ->and($this->container->get('resource'))->toBe($resource);
+    fclose($resource);
+});
 
 test('auto wiring', function () {
     $this->container->set(Foo::class);
@@ -93,9 +141,41 @@ test('class definition with method call', function () {
     expect($this->container->get(Bar::class)->something)->toBe('something in something');
 });
 
-it('get container instance with container interface identifier', function () {
+it('gets container instance with container interface identifier', function () {
     $this->container->set(Bar::class);
-    expect($this->container->get(ContainerInterface::class))->toBeInstanceOf(ContainerInterface::class);
-    $this->assertTrue($this->container === $this->container->get(ContainerInterface::class));
-    expect($this->container->get(ContainerInterface::class)->has(Bar::class))->toBeTrue();
+    expect($this->container->get(ContainerInterface::class))->toBeInstanceOf(ContainerInterface::class)
+        ->and($this->container === $this->container->get(ContainerInterface::class))->toBeTrue()
+        ->and($this->container->get(ContainerInterface::class)->has(Bar::class))->toBeTrue();
 });
+
+test('delegated container returns what is expected', function () {
+    $id = substr(md5(mt_rand()), 0, 7);
+    $value = rand(1, 100);
+    $container1 = new Container();
+    $container2 = new Container();
+    $container3 = new Container();
+    $container3->set($id, fn() => $value);
+    $this->container
+        ->delegate($container1)
+        ->delegate($container2)
+        ->delegate($container3);
+    expect($this->container->get($id))->toBe($value);
+});
+
+test('method set with Definition::class instance', function () {
+    $id = substr(md5(mt_rand()), 0, 7);
+    $message = substr(md5(mt_rand()), 0, 7);
+    $definition = new Definition($id, $message);
+    $this->container->set($id, $definition);
+    expect($this->container->get($id))->toBe($message);
+});
+
+test('get() method throws exception if ID is not found', function () {
+    $id = substr(md5(mt_rand()), 0, 7);
+    var_dump($id, $this->container->get($id));
+})->throws(NotFoundException::class);
+
+test('callable parameters', function () {
+    $this->container->set('callable', fn(int $bar, Baz $baz) => [$bar, $baz]);
+    $this->container->get('callable');
+})->throws(ContainerException::class);

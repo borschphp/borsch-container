@@ -19,16 +19,21 @@ use ReflectionException;
 class Container implements ContainerInterface
 {
 
+    /** @var Definition[] $definitions */
+    protected array $definitions = [];
+
+    protected array $cache = [];
+
+    /** @var ContainerInterface[] $delegates */
+    protected array $delegates = [];
+
     /**
      * Container constructor.
      */
-    public function __construct(
-        /** @var Definition[] */
-        protected array $definitions = [],
-        protected array $cache = []
-    ) {
+    public function __construct()
+    {
         $this
-            ->set(ContainerInterface::class, fn() => $this)
+            ->set(ContainerInterface::class, $this)
             ->cache(true);
     }
 
@@ -47,8 +52,19 @@ class Container implements ContainerInterface
             return $this->cache[$id];
         }
 
+        if (!isset($this->definitions[$id])) {
+            foreach ($this->delegates as $delegate) {
+                if ($delegate->has($id)) {
+                    return $delegate->get($id);
+                }
+            }
+        }
+
         $definition = $this->definitions[$id] ?? $this->set($id);
-        $item = $definition->setContainer($this)->get();
+
+        $item = $definition
+            ->setContainer($this)
+            ->get();
 
         if ($definition->isCached()) {
             $this->cache[$id] = $item;
@@ -69,7 +85,11 @@ class Container implements ContainerInterface
      */
     public function has(string $id): bool
     {
-        return isset($this->definitions[$id]);
+        return isset($this->definitions[$id]) || array_reduce(
+                $this->delegates,
+                fn($has, $container) => $has ?: $container->has($id),
+                false
+            );
     }
 
     /**
@@ -79,8 +99,22 @@ class Container implements ContainerInterface
      */
     public function set(string $id, mixed $definition = null): Definition
     {
-        $this->definitions[$id] = new Definition($id, $definition);
 
-        return $this->definitions[$id];
+        return $this->definitions[$id] ??= $definition instanceof Definition ?
+            $definition :
+            new Definition($id, $definition);
+    }
+
+    /**
+     * Entrust another PSR-11 container in case of missing a requested entry ID.
+     *
+     * @param ContainerInterface $container
+     * @return Container
+     */
+    public function delegate(ContainerInterface $container): Container
+    {
+        $this->delegates[] = $container;
+
+        return $this;
     }
 }

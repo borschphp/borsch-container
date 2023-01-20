@@ -5,11 +5,8 @@
 
 namespace Borsch\Container;
 
-use Psr\Container\{
-    ContainerExceptionInterface,
-    ContainerInterface,
-    NotFoundExceptionInterface
-};
+use Borsch\Container\Exception\{ContainerException, NotFoundException};
+use Psr\Container\{ContainerExceptionInterface, ContainerInterface, NotFoundExceptionInterface};
 use ReflectionClass;
 use ReflectionException;
 use ReflectionFunction;
@@ -23,24 +20,25 @@ use ReflectionParameter;
 class Definition
 {
 
+    protected array $parameters = [];
+
+    protected array $methods = [];
+
+    protected ContainerInterface $container;
+
     /**
      * Definition constructor.
+     *
      * @param string $id
      * @param mixed $concrete
      * @param bool $cached
-     * @param array $parameters
-     * @param array $methods
-     * @param ContainerInterface|null $container
      */
     public function __construct(
         protected string $id,
         protected mixed $concrete = null,
-        protected bool $cached = false,
-        protected array $parameters = [],
-        protected array $methods = [],
-        protected ?ContainerInterface $container = null
+        protected bool $cached = false
     ) {
-        $this->concrete = $concrete ?: $id;
+        $this->concrete = $concrete === null ? $id : $concrete;
     }
 
     /**
@@ -109,7 +107,15 @@ class Definition
             return $this->invokeAsCallable();
         }
 
-        return $this->invokeAsClass();
+        if (($this->id == $this->concrete || is_string($this->concrete)) && class_exists($this->concrete)) {
+            return $this->invokeAsClass();
+        }
+
+        if ($this->id !== $this->concrete) {
+            return $this->concrete;
+        }
+
+        throw NotFoundException::unableToFindEntry($this->id);
     }
 
     /**
@@ -125,7 +131,7 @@ class Definition
             $item = new ReflectionClass($this->concrete);
         } catch (ReflectionException $exception) {
             throw new NotFoundException(
-                sprintf('Unable to find the entry "%s" for definition "%s".', $this->concrete, $this->id),
+                NotFoundException::unableToFindEntry($this->id),
                 $exception->getCode(),
                 $exception
             );
@@ -223,7 +229,7 @@ class Definition
             $function = new ReflectionFunction($this->concrete);
         } catch (ReflectionException $exception) {
             throw new NotFoundException(
-                sprintf('Unable to find the entry "%s".', $this->concrete),
+                NotFoundException::unableToFindEntry($this->id),
                 $exception->getCode(),
                 $exception
             );
@@ -237,7 +243,15 @@ class Definition
             foreach ($function->getParameters() as $param) {
                 $type = $param->getType();
                 if ($type) {
-                    $this->parameters[] = $this->container->get($type->getName());
+                    try {
+                        $this->parameters[] = $this->container->get($type->getName());
+                    } catch (NotFoundException $exception) {
+                        throw ContainerException::unableToGetCallableParameter(
+                            $type,
+                            $this->id,
+                            $exception
+                        );
+                    }
                 }
             }
         }
