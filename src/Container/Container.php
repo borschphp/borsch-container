@@ -99,7 +99,6 @@ class Container implements ContainerInterface
      */
     public function set(string $id, mixed $definition = null): Definition
     {
-
         return $this->definitions[$id] ??= $definition instanceof Definition ?
             $definition :
             new Definition($id, $definition);
