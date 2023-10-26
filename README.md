@@ -54,7 +54,7 @@ $db = $container->get('db');
 ### Shared and Unshared Dependencies
 
 In this example, we're defining a logger service which is shared by default.  
-We're disabling caching and retrieving the logger service twice, so we can see that the two instances are different.
+We're retrieving the logger service twice, so we can see that the two instances are identical.
 
 ```php
 use Borsch\Container\Container;
@@ -105,6 +105,32 @@ $container->set(MyApp::class);
 $app = $container->get(MyApp::class);
 
 // $app is instantiated with the logger from entry Logger::class
+```
+
+### Use the container to get dependencies in a definition
+
+Let say we have a `PDO::class` defined in our container and would like to use it in a Symfony `CacheInterface`
+using PdoAdapter.  
+We can simply get the `PDO::class` instance we defined by requesting it in the function parameters.
+
+```php
+use Borsch\Container\Container;
+
+$container = new Container();
+$container->set(PDO::class, function () {
+    $pdo = new PDO('sqlite:/path/to/my/database.sqlite');
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+    $pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
+
+    return $pdo;
+})->cache(true);
+
+$container->set(
+    CacheInterface::class,
+    // PDO instance defined upper will be injected here as parameter
+    fn(PDO $pdo) => new PdoAdapter($pdo)
+)->cache(true);
 ```
 
 ## License
