@@ -14,7 +14,8 @@
     "psr/container": "^2"
   },
   "require-dev": {
-    "pestphp/pest": "^1.22"
+      "pestphp/pest": "^1.22",
+      "nikic/php-parser": "^4"
   },
   "autoload": {
     "psr-4": {
@@ -24,6 +25,11 @@
   "autoload-dev": {
     "psr-4": {
       "BorschTest\\": "tests/"
+    }
+  },
+  "config": {
+    "allow-plugins": {
+      "pestphp/pest-plugin": true
     }
   }
 }

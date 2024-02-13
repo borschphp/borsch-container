@@ -4,6 +4,22 @@ use Borsch\Container\{Container, Definition, Exception\ContainerException, Excep
 use BorschTest\Assets\{Bar, Baz, Foo};
 use Psr\Container\ContainerInterface;
 
+test('constructor cache the ContainerInterface', function() {
+    $container = new class() extends Borsch\Container\Container {
+        public function isCached(string $id) {
+            return isset($this->cache[$id]);
+        }
+        public function getCachedDefinition(string $id) {
+            return $this->cache[$id];
+        }
+    };
+
+    $container->get(ContainerInterface::class); // Call 1 time to place it in cache
+
+    expect($container->isCached(ContainerInterface::class))->toBeTrue()
+        ->and($container->getCachedDefinition(ContainerInterface::class))->toBe($container);
+});
+
 test('has ID in container', function () {
     $id = substr(md5(mt_rand()), 0, 7);
     $this->container->set($id, fn() => 42);
@@ -179,3 +195,10 @@ test('callable parameters', function () {
     $this->container->set('callable', fn(int $bar, Baz $baz) => [$bar, $baz]);
     $this->container->get('callable');
 })->throws(ContainerException::class);
+
+test('get() method returns real set instance', function() {
+    $foo = new Foo(new Bar());
+    $this->container->set(Foo::class, $foo);
+
+    expect($this->container->get(Foo::class))->toBe($foo);
+});
