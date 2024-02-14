@@ -6,13 +6,14 @@
 namespace Borsch\Container\Exception;
 
 use Exception;
+use Psr\Container\ContainerExceptionInterface;
 use ReflectionNamedType;
 use ReflectionUnionType;
 
 /**
  * Class ContainerException
  */
-class ContainerException extends Exception implements \Psr\Container\ContainerExceptionInterface
+class ContainerException extends Exception implements ContainerExceptionInterface
 {
 
     public static function unableToGetCallableParameter(
@@ -28,7 +29,8 @@ class ContainerException extends Exception implements \Psr\Container\ContainerEx
                 $id,
                 $type->getName()
             ),
-            $exception ? $exception->getCode() : 0,
+            /** @infection-ignore-all */
+            $exception->getCode() ?? 0,
             $exception
         );
     }

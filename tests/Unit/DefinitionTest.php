@@ -1,9 +1,14 @@
 <?php
 
 use Borsch\Container\Definition;
+use Borsch\Container\Exception\ContainerException;
+use Borsch\Container\Exception\NotFoundException;
 use BorschTest\Assets\Bar;
 use BorschTest\Assets\Baz;
+use BorschTest\Assets\Biz;
 use BorschTest\Assets\ExtendedDefinition;
+use BorschTest\Assets\Foo;
+use BorschTest\Assets\Ink;
 use Psr\Container\ContainerInterface;
 
 it('adds method', function () {
@@ -65,3 +70,63 @@ it('gets value', function () {
     $definition->setContainer($this->container);
     expect($definition->get())->toBeInstanceOf(Baz::class);
 });
+
+test('definition with a callable concrete throw ContainerException when missing parameters', function() {
+    $definition = new Definition('id', fn(int $undefined) => new Baz([$undefined]));
+    $definition->setContainer($this->container);
+
+    $definition->get();
+})->throws(
+    ContainerException::class,
+    sprintf(
+        'Unable to get parameter for callable/closure defined in entry with ID "%s". '.
+        'Expected a parameter of type "%s" but could not be found inside the container nor its delegates.',
+        'id',
+        'int'
+    )
+);
+
+test('when definition throw ContainerException, a NotFoundException is thrown previously', function() {
+    try {
+        $definition = new Definition('id', fn(int $undefined) => new Baz([$undefined]));
+        $definition->setContainer($this->container);
+        $definition->get();
+    } catch (Exception $exception) {
+        expect($exception)->toBeInstanceOf(ContainerException::class)
+            ->and($exception->getPrevious())->toBeInstanceOf(NotFoundException::class)
+            ->and($exception->getCode())->toBe($exception->getPrevious()->getCode());
+    }
+});
+
+test('object methods are called with value from container', function () {
+    $this->container->set(Bar::class);
+    $definition = new Definition(Biz::class);
+    $definition
+        ->addMethod('setBar', [Bar::class])
+        ->setContainer($this->container);
+    $biz = $definition->get();
+    expect($biz)->toBeInstanceOf(Biz::class)
+        ->and($biz->bar)->toBeInstanceOf(Bar::class);
+});
+
+test('invoke as class with constructor optional parameters', function () {
+    $definition = new Definition(Baz::class);
+    $definition->setContainer($this->container);
+    /** @var Baz $baz */
+    $baz = $definition->get();
+    expect($baz)->toBeInstanceOf(Baz::class)
+        ->and($baz->getValues())->toBeArray()
+        ->and($baz->getValues())->toBe([
+            'zero',
+            'one',
+            'two',
+            'three'
+        ]);
+});
+
+
+test('invoke as callable throw exception', function () {
+    $definition = new Definition('test', [Ink::class, 'getBar']);
+    $definition->setContainer($this->container);
+    $bar = $definition->get();
+})->throws(NotFoundException::class);

@@ -12,6 +12,7 @@ use ReflectionException;
 use ReflectionFunction;
 use ReflectionMethod;
 use ReflectionParameter;
+use TypeError;
 
 /**
  * Class Definition
@@ -97,7 +98,6 @@ class Definition
     /**
      * @return mixed
      * @throws ContainerExceptionInterface
-     * @throws NotFoundException
      * @throws NotFoundExceptionInterface
      * @throws ReflectionException
      */
@@ -227,7 +227,7 @@ class Definition
     {
         try {
             $function = new ReflectionFunction($this->concrete);
-        } catch (ReflectionException $exception) {
+        } catch (ReflectionException|TypeError $exception) {
             throw new NotFoundException(
                 NotFoundException::unableToFindEntry($this->id),
                 $exception->getCode(),
