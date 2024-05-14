@@ -112,7 +112,9 @@ class Container implements ContainerInterface
      */
     public function delegate(ContainerInterface $container): Container
     {
-        $this->delegates[] = $container;
+        if (spl_object_id($container) !== spl_object_id($this)) {
+            $this->delegates[] = $container;
+        }
 
         return $this;
     }
