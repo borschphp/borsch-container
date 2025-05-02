@@ -5,11 +5,13 @@
 
 namespace Borsch\Container;
 
+use Borsch\Container\Exception\NotFoundException;
 use Psr\Container\{
     ContainerExceptionInterface,
     ContainerInterface,
     NotFoundExceptionInterface
 };
+use Doctrine\Common\Collections\ArrayCollection;
 use ReflectionException;
 
 /**
@@ -19,19 +21,22 @@ use ReflectionException;
 class Container implements ContainerInterface
 {
 
-    /** @var Definition[] $definitions */
-    protected array $definitions = [];
+    /** @var ArrayCollection<Definition> $definitions */
+    protected ArrayCollection $definitions;
 
     protected array $cache = [];
 
-    /** @var ContainerInterface[] $delegates */
-    protected array $delegates = [];
+    /** @var ArrayCollection<ContainerInterface> $delegates */
+    protected ArrayCollection $delegates;
 
     /**
      * Container constructor.
      */
     public function __construct()
     {
+        $this->definitions = new ArrayCollection();
+        $this->delegates = new ArrayCollection();
+
         $this
             ->set(ContainerInterface::class, $this)
             ->cache(true);
@@ -52,66 +57,33 @@ class Container implements ContainerInterface
             return $this->cache[$id];
         }
 
-        /*if (!$this->has($id)) {
-
-        }*/
-
-        if (isset($this->definitions[$id])) {
-            $definition = $this->definitions[$id];
+        $definition = null;
+        if ($this->definitions->containsKey($id)) {
+            $definition = $this->definitions->get($id);
         } elseif ($this->hasTag($id)) {
-            $definition = array_filter(
-                $this->definitions,
-                fn(Definition $definition) => $definition->hasTag($id)
-            );
-        } elseif (array_reduce($this->delegates, fn($has, $container) => $has ?: $container->has($id), false)) {
-            foreach ($this->delegates as $delegate) {
-                if ($delegate->has($id)) {
-                    return $delegate->get($id);
-                }
-            }
+            $definition = $this->definitions->filter(fn(Definition $definition) => $definition->hasTag($id));
+        } else if ($this->delegatedHave($id)) {
+            return $this->delegates
+                ->findFirst(fn($k, ContainerInterface $container) => $container->has($id))
+                ->get($id);
         } else {
             $definition = $this->set($id);
         }
 
-        /*if (!isset($this->definitions[$id]) && $this->hasTag($id)) {
-            $definitions = array_filter(
-                $this->definitions,
-                fn(Definition $definition) => $definition->hasTag($id)
-            );
+        if ($definition === null) {
+            // Can't be null for now, an option will come later to decide if we want to autowire unregistered classes
+            throw new NotFoundException(sprintf('No entry found for "%s".', $id));
+        }
 
-            $items = [];
-            foreach ($definitions as $definition) {
-                $item = $this->cache[$definition->getId()] ?? $definition
-                    ->setContainer($this)
-                    ->get();
-
+        if ($definition instanceof ArrayCollection) {
+            return $definition->map(function (Definition $definition) {
+                $item = $definition->setContainer($this)->get();
                 if ($definition->isCached()) {
                     $this->cache[$definition->getId()] = $item;
                 }
 
-                $items[] = $item;
-            }
-
-            return $items;
-        }*/
-
-        /*$definition = $this->definitions[$id] ?? $this->set($id);*/
-
-        if (is_array($definition)) {
-            $items = [];
-            foreach ($definition as $def) {
-                $item = $this->cache[$def->getId()] ?? $def
-                    ->setContainer($this)
-                    ->get();
-
-                if ($def->isCached()) {
-                    $this->cache[$def->getId()] = $item;
-                }
-
-                $items[] = $item;
-            }
-
-            return $items;
+                return $item;
+            })->toArray();
         }
 
         $item = $definition
@@ -126,18 +98,16 @@ class Container implements ContainerInterface
     }
 
     /**
-     * Returns true if the container can return an entry for the given identifier.
-     * Returns false otherwise.
+     * @inheritdoc
      *
-     * `has($id)` returning true does not mean that `get($id)` will not throw an exception.
-     * It does however mean that `get($id)` will not throw a `NotFoundExceptionInterface`.
-     *
-     * @param string $id
-     * @return bool
+     *  Implementation details:
+     *  1. Checks if the ID exists in the container definitions
+     *  2. Checks if the ID matches a registered tag
+     *  3. Checks if any delegated containers have the ID
      */
     public function has(string $id): bool
     {
-        if (isset($this->definitions[$id])) {
+        if ($this->definitions->containsKey($id)) {
             return true;
         }
 
@@ -145,22 +115,23 @@ class Container implements ContainerInterface
             return true;
         }
 
-        return array_reduce(
-            $this->delegates,
-            fn(bool $has, ContainerInterface $container) => $has ?: $container->has($id),
-            false
-        );
+        return $this->delegatedHave($id);
     }
 
+    /**
+     * Check if any of the definitions have the requested tag.
+     */
     public function hasTag(string $tag): bool
     {
-        foreach ($this->definitions as $definition) {
-            if ($definition->hasTag($tag)) {
-                return true;
-            }
-        }
+        return $this->definitions->exists(fn($k, Definition $definition) => $definition->hasTag($tag));
+    }
 
-        return false;
+    /**
+     * Check if any of the delegated containers have the requested ID.
+     */
+    protected function delegatedHave(string $id): bool
+    {
+        return $this->delegates->exists(fn($k, ContainerInterface $container) => $container->has($id));
     }
 
     /**
@@ -170,9 +141,9 @@ class Container implements ContainerInterface
      */
     public function set(string $id, mixed $definition = null): Definition
     {
-        $this->definitions[$id] = $definition instanceof Definition ?
-            $definition :
-            new Definition($id, $definition);
+        $this->definitions[$id] = $definition instanceof Definition
+            ? $definition
+            : new Definition($id, $definition);
 
         return $this->definitions[$id];
     }
@@ -181,12 +152,12 @@ class Container implements ContainerInterface
      * Entrust another PSR-11 container in case of missing a requested entry ID.
      *
      * @param ContainerInterface $container
-     * @return Container
+     * @return self
      */
     public function delegate(ContainerInterface $container): Container
     {
         if (spl_object_id($container) !== spl_object_id($this)) {
-            $this->delegates[] = $container;
+            $this->delegates->add($container);
         }
 
         return $this;

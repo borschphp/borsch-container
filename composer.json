@@ -15,7 +15,8 @@
   ],
   "require": {
     "php": "^8.2",
-    "psr/container": "^2.0"
+    "psr/container": "^2.0",
+    "doctrine/collections": "^2.3"
   },
   "require-dev": {
     "pestphp/pest": "^3.0",
