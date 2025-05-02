@@ -7,6 +7,7 @@ namespace Borsch\Container\Exception;
 
 use Exception;
 use Psr\Container\ContainerExceptionInterface;
+use ReflectionException;
 use ReflectionNamedType;
 use ReflectionUnionType;
 
@@ -29,7 +30,30 @@ class ContainerException extends Exception implements ContainerExceptionInterfac
                 $id,
                 $type->getName()
             ),
-            /** @infection-ignore-all */
+            $exception->getCode() ?? 0,
+            $exception
+        );
+    }
+
+    public static function unableToGetClassReflection(string $classname, ReflectionException $exception = null) :static
+    {
+        return new static(
+            sprintf(
+                'Unable to create a reflection for class "%s", it does not exist.',
+                $classname
+            ),
+            $exception->getCode() ?? 0,
+            $exception
+        );
+    }
+
+    public static function unableToGetFunctionReflection(string $function, ReflectionException $exception = null) :static
+    {
+        return new static(
+            sprintf(
+                'Unable to create a reflection for function "%s", it does not exist.',
+                $function
+            ),
             $exception->getCode() ?? 0,
             $exception
         );

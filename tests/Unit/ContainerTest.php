@@ -235,4 +235,18 @@ test('alias() returns the aliased entry', function () {
 
 test('alias() throws a NotFoundException when entry does not exist', function () {
     $this->container->alias('Monolog\\Logger', 'Psr\\log\\LoggerInterface');
-})->throws(NotFoundException::class, 'No entry found for "Psr\\log\\LoggerInterface".');
+})->throws(NotFoundException::class, 'Unable to find entry with ID "Psr\\log\\LoggerInterface".');
+
+test('isAutowiring() should return true by default', function () {
+    expect($this->container->isAutowiring())->toBeTrue();
+});
+
+test('setAutowiring() to false', function () {
+    $this->container->setAutowiring(false);
+    expect($this->container->isAutowiring())->toBeFalse();
+});
+
+it('should throw an exception when autowiring is off and class is missing a parameter', function () {
+    $this->container->setAutowiring(false);
+    $this->container->get(Foo::class);
+})->throws(NotFoundException::class);

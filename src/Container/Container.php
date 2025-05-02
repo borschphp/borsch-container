@@ -84,9 +84,8 @@ class Container implements ContainerInterface
                 return $this->getDelegatedItem($id);
             }
 
-            if (!class_exists($id) || !$this->autowire) {
-                // Can't be null for now, an option will come later to decide if we want to autowire unregistered classes
-                throw new NotFoundException(sprintf('No entry found for "%s".', $id));
+            if (!$this->autowire) {
+                throw NotFoundException::unableToFindEntry($id);
             }
 
             $definition = $this->set($id);
@@ -243,7 +242,7 @@ class Container implements ContainerInterface
     public function alias(string $alias, string $from): void
     {
         if (!$this->has($from)) {
-            throw new NotFoundException(sprintf('No entry found for "%s".', $from));
+            throw NotFoundException::unableToFindEntry($from);
         }
 
         $this->set($alias, new Reference($from));

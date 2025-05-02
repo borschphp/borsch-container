@@ -129,7 +129,7 @@ test('invoke as callable throw exception', function () {
     $definition = new Definition('test', [Ink::class, 'getBar']);
     $definition->setContainer($this->container);
     $bar = $definition->get();
-})->throws(NotFoundException::class);
+})->throws(TypeError::class);
 
 test('getId() return ID', function () {
     $definition = new Definition('test', fn() => 'it is a test');

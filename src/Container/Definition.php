@@ -179,11 +179,7 @@ class Definition
         try {
             $item = new ReflectionClass($this->concrete);
         } catch (ReflectionException $exception) {
-            throw new NotFoundException(
-                NotFoundException::unableToFindEntry($this->id),
-                $exception->getCode(),
-                $exception
-            );
+            throw ContainerException::unableToGetClassReflection($this->concrete, $exception);
         }
 
         $constructor = $item->getConstructor();
@@ -283,11 +279,7 @@ class Definition
         try {
             $function = new ReflectionFunction($this->concrete);
         } catch (ReflectionException|TypeError $exception) {
-            throw new NotFoundException(
-                NotFoundException::unableToFindEntry($this->id),
-                $exception->getCode(),
-                $exception
-            );
+            throw ContainerException::unableToGetFunctionReflection($this->concrete, $exception);
         }
 
         if (!$function->getNumberOfParameters()) {
