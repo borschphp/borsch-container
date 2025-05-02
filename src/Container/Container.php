@@ -29,6 +29,8 @@ class Container implements ContainerInterface
     /** @var ArrayCollection<ContainerInterface> $delegates */
     protected ArrayCollection $delegates;
 
+    protected bool $autowire_unregistered_class = true;
+
     /**
      * Container constructor.
      */
@@ -43,12 +45,28 @@ class Container implements ContainerInterface
     }
 
     /**
-     * Finds an entry of the container by its identifier and returns it.
+     * If set to true, the container will try to autowire unregistered classes.
+     * This is useful for classes that are not registered in the container but are still needed.
+     *
+     * This will add an entry in the container with key as the class FQDN.
+     *
+     * Example:
+     *
+     * $container = new Container();
+     * $container->get(MyClass::class);
      *
      * @param string $id
-     * @return mixed
-     * @throws NotFoundExceptionInterface
-     * @throws ContainerExceptionInterface
+     * @return Definition
+     */
+    public function autowireUnregisteredClass(bool $autowire): self
+    {
+        $this->autowire_unregistered_class = $autowire;
+
+        return $this;
+    }
+
+    /**
+     * @inheritDoc
      * @throws ReflectionException
      */
     public function get(string $id): mixed
@@ -57,44 +75,94 @@ class Container implements ContainerInterface
             return $this->cache[$id];
         }
 
-        $definition = null;
-        if ($this->definitions->containsKey($id)) {
-            $definition = $this->definitions->get($id);
-        } elseif ($this->hasTag($id)) {
-            $definition = $this->definitions->filter(fn(Definition $definition) => $definition->hasTag($id));
-        } else if ($this->delegatedHave($id)) {
-            return $this->delegates
-                ->findFirst(fn($k, ContainerInterface $container) => $container->has($id))
-                ->get($id);
-        } else {
+        $definition = $this->resolveDefinition($id);
+
+        if ($definition === null) {
+            if ($this->delegatedHave($id)) {
+                return $this->getDelegatedItem($id);
+            }
+
+            if (!class_exists($id) || !$this->autowire_unregistered_class) {
+                // Can't be null for now, an option will come later to decide if we want to autowire unregistered classes
+                throw new NotFoundException(sprintf('No entry found for "%s".', $id));
+            }
+
             $definition = $this->set($id);
         }
 
-        if ($definition === null) {
-            // Can't be null for now, an option will come later to decide if we want to autowire unregistered classes
-            throw new NotFoundException(sprintf('No entry found for "%s".', $id));
-        }
-
         if ($definition instanceof ArrayCollection) {
-            return $definition->map(function (Definition $definition) {
-                $item = $definition->setContainer($this)->get();
-                if ($definition->isCached()) {
-                    $this->cache[$definition->getId()] = $item;
-                }
-
-                return $item;
-            })->toArray();
+            return $this->resolveDefinitionCollection($definition);
         }
 
-        $item = $definition
-            ->setContainer($this)
-            ->get();
+        return $this->resolveDefinitionItem($definition, $id);
+    }
+
+    /**
+     * Resolve a definition based on lookup priority.
+     */
+    protected function resolveDefinition(string $id): Definition|ArrayCollection|null
+    {
+        if ($this->definitions->containsKey($id)) {
+            return $this->definitions->get($id);
+        }
+
+        if ($this->hasTag($id)) {
+            return $this->definitions->filter(fn(Definition $definition) => $definition->hasTag($id));
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolve a collection of definitions.
+     *
+     * @param ArrayCollection<Definition> $definitions
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     * @throws ReflectionException
+     */
+    protected function resolveDefinitionCollection(ArrayCollection $definitions): array
+    {
+        return $definitions->map(function (Definition $definition) {
+            $item = $definition->setContainer($this)->get();
+
+            if ($definition->isCached()) {
+                $this->cache[$definition->getId()] = $item;
+            }
+
+            return $item;
+        })->toArray();
+    }
+
+    /**
+     * Resolve a single definition item.
+     *
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     * @throws ReflectionException
+     */
+    protected function resolveDefinitionItem(Definition $definition, string $id): mixed
+    {
+        $item = $definition->setContainer($this)->get();
 
         if ($definition->isCached()) {
             $this->cache[$id] = $item;
         }
 
         return $item;
+    }
+
+    /**
+     * Get an item from a delegated container.
+     *
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     */
+    protected function getDelegatedItem(string $id): mixed
+    {
+        return $this->delegates
+            ->findFirst(fn($k, ContainerInterface $container) => $container->has($id))
+            ->get($id);
     }
 
     /**
