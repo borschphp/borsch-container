@@ -45,6 +45,26 @@ test('does not have ID in delegated container', function () {
     expect($this->container->has('nonExistingId'))->toBeFalse();
 });
 
+test('has() with tags', function () {
+    $this->container->set(DateTime::class)
+        ->addParameter('now', 'datetime')
+        ->addTag('#date');
+    $this->container->set('today', fn() => new DateTime())
+        ->addTag('#date');
+    expect($this->container->has('#date'))->toBeTrue()
+        ->and($this->container->has('#bar'))->toBeFalse();
+});
+
+test('array resolution', function () {
+    $this->container->set('array', ['foo' => 'bar']);
+    expect($this->container->get('array'))->toBe(['foo' => 'bar']);
+});
+
+test('scalar resolution', function () {
+    $this->container->set('scalar', 'foo');
+    expect($this->container->get('scalar'))->toBe('foo');
+});
+
 test('closure resolution', function () {
     $this->container->set('closure', fn() => 'closure');
     expect($this->container->get('closure'))->toBe('closure');
@@ -204,3 +224,15 @@ test('get() method returns real set instance', function() {
 
     expect($this->container->get(Foo::class))->toBe($foo);
 });
+
+test('alias() returns the aliased entry', function () {
+    $id = substr(md5(mt_rand()), 0, 7);
+    $alias = substr(md5(mt_rand()), 0, 7);
+    $this->container->set($id, fn() => 42);
+    $this->container->alias($alias, $id);
+    expect($this->container->get($alias))->toBe(42);
+});
+
+test('alias() throws a NotFoundException when entry does not exist', function () {
+    $this->container->alias('Monolog\\Logger', 'Psr\\log\\LoggerInterface');
+})->throws(NotFoundException::class, 'No entry found for "Psr\\log\\LoggerInterface".');

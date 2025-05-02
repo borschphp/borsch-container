@@ -92,6 +92,10 @@ class Container implements ContainerInterface
             $definition = $this->set($id);
         }
 
+        if ($definition->isReference()) {
+            return $this->get($definition->getConcrete()->reference());
+        }
+
         if ($definition instanceof ArrayCollection) {
             return $this->resolveDefinitionCollection($definition);
         }
@@ -231,5 +235,17 @@ class Container implements ContainerInterface
         }
 
         return $this;
+    }
+
+    /**
+     * @throws NotFoundException
+     */
+    public function alias(string $alias, string $from): void
+    {
+        if (!$this->has($from)) {
+            throw new NotFoundException(sprintf('No entry found for "%s".', $from));
+        }
+
+        $this->set($alias, new Reference($from));
     }
 }

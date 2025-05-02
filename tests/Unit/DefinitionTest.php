@@ -3,6 +3,7 @@
 use Borsch\Container\Definition;
 use Borsch\Container\Exception\ContainerException;
 use Borsch\Container\Exception\NotFoundException;
+use Borsch\Container\Reference;
 use BorschTest\Assets\Bar;
 use BorschTest\Assets\Baz;
 use BorschTest\Assets\Biz;
@@ -124,9 +125,76 @@ test('invoke as class with constructor optional parameters', function () {
         ]);
 });
 
-
 test('invoke as callable throw exception', function () {
     $definition = new Definition('test', [Ink::class, 'getBar']);
     $definition->setContainer($this->container);
     $bar = $definition->get();
 })->throws(NotFoundException::class);
+
+test('getId() return ID', function () {
+    $definition = new Definition('test', fn() => 'it is a test');
+    expect($definition->getId())->toBe('test');
+});
+
+test('getConcrete() return concrete', function () {
+    $definition = new Definition('test', fn() => 'it is a test');
+    $concrete = $definition->getConcrete();
+    expect($concrete)->toBeCallable()
+        ->and($concrete())->toBe('it is a test');
+});
+
+test('addParameter() with key', function () {
+    $definition = new class('id', 'concrete') extends Definition {
+        public function getParameters(): array { return $this->parameters; }
+    };
+
+    $definition->addParameter('test', 'key');
+    expect($definition->getParameters())->toBe(['key' => 'test']);
+});
+
+test('addParameters', function () {
+    $definition = new class('id', 'concrete') extends Definition {
+        public function getParameters(): array { return $this->parameters; }
+    };
+
+    $definition->addParameters(['key' => 'test']);
+    expect($definition->getParameters())->toBe(['key' => 'test']);
+});
+
+test('addTag() add tag', function () {
+    $definition = new Definition('id', 'concrete');
+    $definition->addTag('tag1');
+    expect($definition->hasTag('tag1'))->toBeTrue()
+        ->and($definition->hasTag('tag2'))->toBeFalse();
+});
+
+test('addTags() add tags', function () {
+    $definition = new Definition('id', 'concrete');
+    $definition->addTags(['tag1', 'tag2']);
+    expect($definition->hasTag('tag1'))->toBeTrue()
+        ->and($definition->hasTag('tag2'))->toBeTrue()
+        ->and($definition->hasTag('tag3'))->toBeFalse();
+});
+
+test('hasTag() return true if tag exists', function () {
+    $definition = new Definition('id', 'concrete');
+    $definition->addTag('tag1');
+    expect($definition->hasTag('tag1'))->toBeTrue()
+        ->and($definition->hasTag('tag2'))->toBeFalse();
+});
+
+test('hasTag() return false if tag does not exist', function () {
+    $definition = new Definition('id', 'concrete');
+    $definition->addTag('tag1');
+    expect($definition->hasTag('tag2'))->toBeFalse();
+});
+
+test('isReference() returns true on Reference concrete', function () {
+    $definition = new Definition('id', new Reference('test'));
+    expect($definition->isReference())->toBeTrue();
+});
+
+test('isReference() returns false on non Reference concrete', function () {
+    $definition = new Definition('id', 'test');
+    expect($definition->isReference())->toBeFalse();
+});

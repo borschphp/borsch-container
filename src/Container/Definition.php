@@ -139,6 +139,11 @@ class Definition
         return $this->cached;
     }
 
+    public function isReference(): bool
+    {
+        return $this->concrete instanceof Reference;
+    }
+
     /**
      * @return mixed
      * @throws ContainerExceptionInterface

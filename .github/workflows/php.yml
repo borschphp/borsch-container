@@ -43,4 +43,4 @@ jobs:
         run: ./vendor/bin/pest --parallel
 
       - name: Run mutation tests
-        run: XDEBUG_MODE=coverage ./vendor/bin/pest --mutate --min=60 --parallel
+        run: XDEBUG_MODE=coverage ./vendor/bin/pest --mutate --min=70 --parallel
