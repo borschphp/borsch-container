@@ -11,6 +11,8 @@ use BorschTest\Assets\Foo;
 use BorschTest\Assets\Ink;
 use Psr\Container\ContainerInterface;
 
+covers(Definition::class);
+
 it('adds method', function () {
     $definition = new Definition(Bar::class);
     $definition->addMethod('setSomething', ['something']);

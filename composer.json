@@ -2,7 +2,11 @@
   "name": "borschphp/container",
   "description": "A simple PSR-11 Container implementation.",
   "license": "MIT",
-  "keywords": ["psr", "psr-11", "container"],
+  "keywords": [
+    "psr",
+    "psr-11",
+    "container"
+  ],
   "authors": [
     {
       "name": "Alexandre DEBUSSCHERE",
@@ -10,12 +14,12 @@
     }
   ],
   "require": {
-    "php": "^8.0",
-    "psr/container": "^2"
+    "php": "^8.2",
+    "psr/container": "^2.0"
   },
   "require-dev": {
-      "pestphp/pest": "^1.22",
-      "nikic/php-parser": "^4"
+    "pestphp/pest": "^3.0",
+    "phpstan/phpstan": "^2.1"
   },
   "autoload": {
     "psr-4": {

@@ -52,15 +52,67 @@ class Container implements ContainerInterface
             return $this->cache[$id];
         }
 
-        if (!isset($this->definitions[$id])) {
+        /*if (!$this->has($id)) {
+
+        }*/
+
+        if (isset($this->definitions[$id])) {
+            $definition = $this->definitions[$id];
+        } elseif ($this->hasTag($id)) {
+            $definition = array_filter(
+                $this->definitions,
+                fn(Definition $definition) => $definition->hasTag($id)
+            );
+        } elseif (array_reduce($this->delegates, fn($has, $container) => $has ?: $container->has($id), false)) {
             foreach ($this->delegates as $delegate) {
                 if ($delegate->has($id)) {
                     return $delegate->get($id);
                 }
             }
+        } else {
+            $definition = $this->set($id);
         }
 
-        $definition = $this->definitions[$id] ?? $this->set($id);
+        /*if (!isset($this->definitions[$id]) && $this->hasTag($id)) {
+            $definitions = array_filter(
+                $this->definitions,
+                fn(Definition $definition) => $definition->hasTag($id)
+            );
+
+            $items = [];
+            foreach ($definitions as $definition) {
+                $item = $this->cache[$definition->getId()] ?? $definition
+                    ->setContainer($this)
+                    ->get();
+
+                if ($definition->isCached()) {
+                    $this->cache[$definition->getId()] = $item;
+                }
+
+                $items[] = $item;
+            }
+
+            return $items;
+        }*/
+
+        /*$definition = $this->definitions[$id] ?? $this->set($id);*/
+
+        if (is_array($definition)) {
+            $items = [];
+            foreach ($definition as $def) {
+                $item = $this->cache[$def->getId()] ?? $def
+                    ->setContainer($this)
+                    ->get();
+
+                if ($def->isCached()) {
+                    $this->cache[$def->getId()] = $item;
+                }
+
+                $items[] = $item;
+            }
+
+            return $items;
+        }
 
         $item = $definition
             ->setContainer($this)
@@ -85,11 +137,30 @@ class Container implements ContainerInterface
      */
     public function has(string $id): bool
     {
-        return isset($this->definitions[$id]) || array_reduce(
-                $this->delegates,
-                fn($has, $container) => $has ?: $container->has($id),
-                false
-            );
+        if (isset($this->definitions[$id])) {
+            return true;
+        }
+
+        if ($this->hasTag($id)) {
+            return true;
+        }
+
+        return array_reduce(
+            $this->delegates,
+            fn(bool $has, ContainerInterface $container) => $has ?: $container->has($id),
+            false
+        );
+    }
+
+    public function hasTag(string $tag): bool
+    {
+        foreach ($this->definitions as $definition) {
+            if ($definition->hasTag($tag)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -99,9 +170,11 @@ class Container implements ContainerInterface
      */
     public function set(string $id, mixed $definition = null): Definition
     {
-        return $this->definitions[$id] ??= $definition instanceof Definition ?
+        $this->definitions[$id] = $definition instanceof Definition ?
             $definition :
             new Definition($id, $definition);
+
+        return $this->definitions[$id];
     }
 
     /**

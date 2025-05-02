@@ -21,9 +21,14 @@ use TypeError;
 class Definition
 {
 
+    /** @var mixed[] */
     protected array $parameters = [];
 
+    /** @var array<string, array<mixed>> */
     protected array $methods = [];
+
+    /** @var string[] */
+    protected array $tags = [];
 
     protected ContainerInterface $container;
 
@@ -40,6 +45,11 @@ class Definition
         protected bool $cached = false
     ) {
         $this->concrete = $concrete === null ? $id : $concrete;
+    }
+
+    public function getId(): string
+    {
+        return $this->id;
     }
 
     /**
@@ -63,6 +73,28 @@ class Definition
         $this->methods[] = [$name, $arguments];
 
         return $this;
+    }
+
+    public function addTag(string $name): self
+    {
+        $this->tags[] = $name;
+
+        return $this;
+    }
+
+    /** @param string[] $tags */
+    public function addTags(array $tags): self
+    {
+        foreach ($tags as $tag) {
+            $this->addTag($tag);
+        }
+
+        return $this;
+    }
+
+    public function hasTag(string $tag): bool
+    {
+        return in_array($tag, $this->tags);
     }
 
     /**

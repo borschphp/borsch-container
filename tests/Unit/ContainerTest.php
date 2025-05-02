@@ -4,6 +4,8 @@ use Borsch\Container\{Container, Definition, Exception\ContainerException, Excep
 use BorschTest\Assets\{Bar, Baz, Foo};
 use Psr\Container\ContainerInterface;
 
+covers(Container::class);
+
 test('constructor cache the ContainerInterface', function() {
     $container = new class() extends Borsch\Container\Container {
         public function isCached(string $id) {
