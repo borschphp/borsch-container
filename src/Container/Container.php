@@ -29,11 +29,8 @@ class Container implements ContainerInterface
     /** @var ArrayCollection<ContainerInterface> $delegates */
     protected ArrayCollection $delegates;
 
-    protected bool $autowire_unregistered_class = true;
+    protected bool $autowire = true;
 
-    /**
-     * Container constructor.
-     */
     public function __construct()
     {
         $this->definitions = new ArrayCollection();
@@ -55,14 +52,19 @@ class Container implements ContainerInterface
      * $container = new Container();
      * $container->get(MyClass::class);
      *
-     * @param string $id
-     * @return Definition
+     * @param bool $autowire
+     * @return self
      */
-    public function autowireUnregisteredClass(bool $autowire): self
+    public function setAutowiring(bool $autowire): self
     {
-        $this->autowire_unregistered_class = $autowire;
+        $this->autowire = $autowire;
 
         return $this;
+    }
+
+    public function isAutowiring(): bool
+    {
+        return $this->autowire;
     }
 
     /**
@@ -82,7 +84,7 @@ class Container implements ContainerInterface
                 return $this->getDelegatedItem($id);
             }
 
-            if (!class_exists($id) || !$this->autowire_unregistered_class) {
+            if (!class_exists($id) || !$this->autowire) {
                 // Can't be null for now, an option will come later to decide if we want to autowire unregistered classes
                 throw new NotFoundException(sprintf('No entry found for "%s".', $id));
             }
