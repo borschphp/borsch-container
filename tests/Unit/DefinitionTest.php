@@ -6,8 +6,6 @@ use Borsch\Container\Exception\NotFoundException;
 use BorschTest\Assets\Bar;
 use BorschTest\Assets\Baz;
 use BorschTest\Assets\Biz;
-use BorschTest\Assets\ExtendedDefinition;
-use BorschTest\Assets\Foo;
 use BorschTest\Assets\Ink;
 use Psr\Container\ContainerInterface;
 
@@ -39,13 +37,13 @@ it('is cached', function () {
 });
 
 test('constructor deals with id and concrete correctly', function () {
-    $definition = new ExtendedDefinition(Bar::class);
-    expect($definition->getId())->toBe(Bar::class);
-    expect($definition->getConcrete())->toBe(Bar::class);
+    $definition = new Definition(Bar::class);
+    expect($definition->getId())->toBe(Bar::class)
+        ->and($definition->getConcrete())->toBe(Bar::class);
 
-    $definition = new ExtendedDefinition(Bar::class, 'test');
-    expect($definition->getId())->toBe(Bar::class);
-    expect($definition->getConcrete())->toBe('test');
+    $definition = new Definition(Bar::class, 'test');
+    expect($definition->getId())->toBe(Bar::class)
+        ->and($definition->getConcrete())->toBe('test');
 });
 
 it('adds parameter', function () {
@@ -73,7 +71,7 @@ it('gets value', function () {
     expect($definition->get())->toBeInstanceOf(Baz::class);
 });
 
-test('definition with a callable concrete throw ContainerException when missing parameters', function() {
+test('definition with a callable concrete throw ContainerException when missing parameters', function () {
     $definition = new Definition('id', fn(int $undefined) => new Baz([$undefined]));
     $definition->setContainer($this->container);
 
@@ -81,14 +79,14 @@ test('definition with a callable concrete throw ContainerException when missing 
 })->throws(
     ContainerException::class,
     sprintf(
-        'Unable to get parameter for callable/closure defined in entry with ID "%s". '.
+        'Unable to get parameter for callable/closure defined in entry with ID "%s". ' .
         'Expected a parameter of type "%s" but could not be found inside the container nor its delegates.',
         'id',
         'int'
     )
 );
 
-test('when definition throw ContainerException, a NotFoundException is thrown previously', function() {
+test('when definition throw ContainerException, a NotFoundException is thrown previously', function () {
     try {
         $definition = new Definition('id', fn(int $undefined) => new Baz([$undefined]));
         $definition->setContainer($this->container);

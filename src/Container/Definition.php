@@ -52,13 +52,25 @@ class Definition
         return $this->id;
     }
 
-    /**
-     * @param mixed $value
-     * @return Definition
-     */
-    public function addParameter(mixed $value): self
+    public function getConcrete(): mixed
     {
-        $this->parameters[] = $value;
+        return $this->concrete;
+    }
+
+    public function addParameter(mixed $value, string $key = null): self
+    {
+        if ($key !== null) {
+            $this->parameters[$key] = $value;
+        } else {
+            $this->parameters[] = $value;
+        }
+
+        return $this;
+    }
+
+    public function addParameters(array $values): self
+    {
+        $this->parameters = $values;
 
         return $this;
     }
@@ -210,6 +222,12 @@ class Definition
     {
         if (!count($this->parameters)) {
             $this->parameters = $this->getNewInstanceParameters($constructor);
+        }
+
+        foreach ($this->parameters as $index => $parameter) {
+            if ($parameter instanceof Reference) {
+                $this->parameters[$index] = $this->container->get($parameter->reference());
+            }
         }
 
         return $item->newInstanceArgs($this->parameters);
