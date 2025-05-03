@@ -52,4 +52,24 @@ class ContainerException extends Exception implements ContainerExceptionInterfac
             $exception
         );
     }
+
+    public static function extendingWithSameIdAndFromForbidden(string $id): self
+    {
+        return new self(
+            sprintf(
+                'It is forbidden to extend a definition with the same ID (%s), provide a new ID (e.g. $from) to fix the issue.',
+                $id
+            )
+        );
+    }
+
+    public static function extendingAnExistingEntryIsForbidden(string $id): self
+    {
+        return new self(
+            sprintf(
+                'It is forbidden to extend a definition and register it with an existing ID (%s), provide a new ID (e.g. $from) to fix the issue.',
+                $id
+            )
+        );
+    }
 }

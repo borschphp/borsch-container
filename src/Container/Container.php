@@ -5,6 +5,7 @@
 
 namespace Borsch\Container;
 
+use Borsch\Container\Exception\ContainerException;
 use Borsch\Container\Exception\NotFoundException;
 use Psr\Container\{
     ContainerExceptionInterface,
@@ -21,8 +22,10 @@ use ReflectionException;
 class Container implements ContainerInterface
 {
 
-    /** @var ArrayCollection<string, Definition> $definitions */
+    /** @var ArrayCollection<string, Definition|DefinitionExtender> $definitions */
     protected ArrayCollection $definitions;
+
+    protected bool $cache_by_default = false;
 
     /** @var array<string, mixed> $cache */
     protected array $cache = [];
@@ -69,6 +72,33 @@ class Container implements ContainerInterface
     }
 
     /**
+     * Set the default cache behavior for the container.
+     *
+     * The cache for a definition is set when you add an item to the container.
+     *
+     * If set to true, the container will cache all the definitions.
+     * If set to false, the container will not cache any definitions.
+     * The cache behavior can be overridden on a per-definition basis.
+     *
+     * @param bool $cache
+     * @return self
+     */
+    public function setCacheByDefault(bool $cache): self
+    {
+        $this->cache_by_default = $cache;
+
+        return $this;
+    }
+
+    /**
+     * @see Container::setCacheByDefault()
+     */
+    public function getCacheByDefault(): bool
+    {
+        return $this->cache_by_default;
+    }
+
+    /**
      * @inheritDoc
      * @throws ReflectionException
      */
@@ -97,7 +127,7 @@ class Container implements ContainerInterface
         }
 
         if ($definition->isReference()) {
-            return $this->get($definition->getConcrete()->reference());
+            return $this->get($definition->getConcrete()->references());
         }
 
         return $this->resolveDefinitionItem($definition, $id);
@@ -221,9 +251,36 @@ class Container implements ContainerInterface
     {
         $this->definitions[$id] = $definition instanceof Definition
             ? $definition
-            : new Definition($id, $definition);
+            : new Definition($id, $definition, $this->cache_by_default);
 
         return $this->definitions[$id];
+    }
+
+    /**
+     * Extend an existing definition with a callable.
+     *
+     * A new definition will be created with the ID $id in the container.
+     *
+     * @param callable $callable The callable to extend the definition with
+     * @phpstan-param callable(mixed, Container): mixed $callable
+     * @throws NotFoundException if $from is not found in the container
+     * @throws ContainerException if $id is the same as $from
+     */
+    public function extend(string $id, callable $callable, string $from): DefinitionExtender
+    {
+        if ($id === $from) {
+            throw ContainerException::extendingWithSameIdAndFromForbidden($id);
+        }
+
+        if ($this->has($id)) {
+            throw ContainerException::extendingAnExistingEntryIsForbidden($id);
+        }
+
+        if (!$this->has($from)) {
+            throw NotFoundException::unableToFindEntry($from);
+        }
+
+        return $this->definitions[$id] = new DefinitionExtender($id, $callable, $from);
     }
 
     /**
