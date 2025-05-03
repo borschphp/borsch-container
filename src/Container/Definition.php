@@ -61,7 +61,7 @@ class Definition
         return $this->concrete;
     }
 
-    public function addParameter(mixed $value, string $key = null): self
+    public function addParameter(mixed $value, ?string $key = null): self
     {
         if ($key !== null) {
             $this->parameters[$key] = $value;
