@@ -6,5 +6,5 @@ covers(Reference::class);
 
 test('reference() returns the id', function () {
     $reference = new Reference('test');
-    expect($reference->reference())->toBe('test');
+    expect($reference->references())->toBe('test');
 });

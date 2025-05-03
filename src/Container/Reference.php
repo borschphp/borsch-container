@@ -1,7 +1,14 @@
 <?php
+/**
+ * @author debuss-a
+ */
 
 namespace Borsch\Container;
 
+/**
+ * Class Reference
+ * @package Borsch\Container
+ */
 class Reference
 {
 
@@ -9,7 +16,10 @@ class Reference
         protected string $id
     ) {}
 
-    public function reference(): string
+    /**
+     * Returns the ID of the reference.
+     */
+    public function references(): string
     {
         return $this->id;
     }

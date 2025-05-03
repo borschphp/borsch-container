@@ -10,8 +10,12 @@ use Psr\Container\{ContainerExceptionInterface, ContainerInterface, NotFoundExce
 use ReflectionClass;
 use ReflectionException;
 use ReflectionFunction;
+use ReflectionIntersectionType;
 use ReflectionMethod;
+use ReflectionNamedType;
 use ReflectionParameter;
+use ReflectionType;
+use ReflectionUnionType;
 use TypeError;
 
 /**
@@ -68,6 +72,9 @@ class Definition
         return $this;
     }
 
+    /**
+     * @param array<int|string, mixed> $values
+     */
     public function addParameters(array $values): self
     {
         $this->parameters = $values;
@@ -77,7 +84,7 @@ class Definition
 
     /**
      * @param string $name
-     * @param array $arguments
+     * @param array<int|string, mixed> $arguments
      * @return $this
      */
     public function addMethod(string $name, array $arguments = []): self
@@ -212,9 +219,9 @@ class Definition
     }
 
     /**
-     * @param ReflectionMethod $constructor
-     * @param ReflectionClass $item
-     * @return object
+     * @template T of object
+     * @phpstan-param ReflectionClass<T> $item
+     * @return T
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface
      * @throws ReflectionException
@@ -227,7 +234,7 @@ class Definition
 
         foreach ($this->parameters as $index => $parameter) {
             if ($parameter instanceof Reference) {
-                $this->parameters[$index] = $this->container->get($parameter->reference());
+                $this->parameters[$index] = $this->container->get($parameter->references());
             }
         }
 
@@ -236,7 +243,7 @@ class Definition
 
     /**
      * @param ReflectionMethod $constructor
-     * @return array
+     * @return array<int|string, mixed>
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface
      * @throws ReflectionException
@@ -246,9 +253,9 @@ class Definition
         return array_reduce($constructor->getParameters(), function(array $parameters, ReflectionParameter $reflection_parameter) {
             $parameter = null;
 
-            $type = $reflection_parameter?->getType()?->getName();
-            if ($this->containerHasOrCanRetrieve($type)) {
-                $parameter = $this->container->get($type);
+            $type = $reflection_parameter->getType();
+            if (method_exists($type, 'getName') && $this->containerHasOrCanRetrieve($type->getName())) {
+                $parameter = $this->container->get($type->getName());
             } elseif ($reflection_parameter->isOptional() && $reflection_parameter->isDefaultValueAvailable()) {
                 $parameter = $reflection_parameter->getDefaultValue();
             }
@@ -278,7 +285,7 @@ class Definition
     {
         try {
             $function = new ReflectionFunction($this->concrete);
-        } catch (ReflectionException|TypeError $exception) {
+        } catch (ReflectionException $exception) {
             throw ContainerException::unableToGetFunctionReflection($this->concrete, $exception);
         }
 
@@ -288,16 +295,13 @@ class Definition
 
         if (!count($this->parameters)) {
             foreach ($function->getParameters() as $param) {
+                /** @var ReflectionNamedType|ReflectionUnionType|ReflectionIntersectionType|ReflectionType|null $type */
                 $type = $param->getType();
-                if ($type) {
+                if ($type && method_exists($type, 'getName')) {
                     try {
                         $this->parameters[] = $this->container->get($type->getName());
                     } catch (NotFoundException $exception) {
-                        throw ContainerException::unableToGetCallableParameter(
-                            $type,
-                            $this->id,
-                            $exception
-                        );
+                        throw ContainerException::unableToGetCallableParameter($type, $this->id, $exception);
                     }
                 }
             }

@@ -21,12 +21,13 @@ use ReflectionException;
 class Container implements ContainerInterface
 {
 
-    /** @var ArrayCollection<Definition> $definitions */
+    /** @var ArrayCollection<string, Definition> $definitions */
     protected ArrayCollection $definitions;
 
+    /** @var array<string, mixed> $cache */
     protected array $cache = [];
 
-    /** @var ArrayCollection<ContainerInterface> $delegates */
+    /** @var ArrayCollection<int, ContainerInterface> $delegates */
     protected ArrayCollection $delegates;
 
     protected bool $autowire = true;
@@ -45,7 +46,7 @@ class Container implements ContainerInterface
      * If set to true, the container will try to autowire unregistered classes.
      * This is useful for classes that are not registered in the container but are still needed.
      *
-     * This will add an entry in the container with key as the class FQDN.
+     * This will add an entry in the container with a key as the class FQDN.
      *
      * Example:
      *
@@ -91,12 +92,12 @@ class Container implements ContainerInterface
             $definition = $this->set($id);
         }
 
-        if ($definition->isReference()) {
-            return $this->get($definition->getConcrete()->reference());
-        }
-
         if ($definition instanceof ArrayCollection) {
             return $this->resolveDefinitionCollection($definition);
+        }
+
+        if ($definition->isReference()) {
+            return $this->get($definition->getConcrete()->reference());
         }
 
         return $this->resolveDefinitionItem($definition, $id);
@@ -104,6 +105,9 @@ class Container implements ContainerInterface
 
     /**
      * Resolve a definition based on lookup priority.
+     *
+     * @param string $id
+     * @return Definition|ArrayCollection<string, Definition>|null
      */
     protected function resolveDefinition(string $id): Definition|ArrayCollection|null
     {
@@ -121,7 +125,8 @@ class Container implements ContainerInterface
     /**
      * Resolve a collection of definitions.
      *
-     * @param ArrayCollection<Definition> $definitions
+     * @param ArrayCollection<string, Definition> $definitions
+     * @return array<string, mixed>
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface
      * @throws ReflectionException
@@ -174,7 +179,7 @@ class Container implements ContainerInterface
      * @inheritdoc
      *
      *  Implementation details:
-     *  1. Checks if the ID exists in the container definitions
+     *  1. Checks if the ID exists in container definitions
      *  2. Checks if the ID matches a registered tag
      *  3. Checks if any delegated containers have the ID
      */

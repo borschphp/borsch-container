@@ -14,8 +14,8 @@ use Psr\Container\NotFoundExceptionInterface;
 class NotFoundException extends Exception implements NotFoundExceptionInterface
 {
 
-    public static function unableToFindEntry(string $id): static
+    public static function unableToFindEntry(string $id): self
     {
-        return new static(sprintf('Unable to find entry with ID "%s".', $id));
+        return new self(sprintf('Unable to find entry with ID "%s".', $id));
     }
 }
