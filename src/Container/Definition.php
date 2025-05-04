@@ -16,7 +16,7 @@ use ReflectionNamedType;
 use ReflectionParameter;
 use ReflectionType;
 use ReflectionUnionType;
-use TypeError;
+use function is_callable, is_string, is_null, class_exists, in_array, call_user_func_array, array_reduce, count, method_exists;
 
 /**
  * Class Definition

@@ -2,6 +2,8 @@
 
 namespace Borsch\Container;
 
+use function call_user_func_array;
+
 class DefinitionExtender extends Definition
 {
 

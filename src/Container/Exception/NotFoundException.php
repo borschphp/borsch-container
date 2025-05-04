@@ -7,6 +7,7 @@ namespace Borsch\Container\Exception;
 
 use Exception;
 use Psr\Container\NotFoundExceptionInterface;
+use function sprintf;
 
 /**
  * Class NotFoundException

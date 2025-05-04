@@ -14,6 +14,7 @@ use Psr\Container\{
 };
 use Doctrine\Common\Collections\ArrayCollection;
 use ReflectionException;
+use function spl_object_id;
 
 /**
  * Class Container

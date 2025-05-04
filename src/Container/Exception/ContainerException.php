@@ -9,6 +9,7 @@ use Exception;
 use Psr\Container\ContainerExceptionInterface;
 use ReflectionException;
 use ReflectionType;
+use function sprintf, method_exists;
 
 /**
  * Class ContainerException
