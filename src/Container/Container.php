@@ -7,11 +7,7 @@ namespace Borsch\Container;
 
 use Borsch\Container\Exception\ContainerException;
 use Borsch\Container\Exception\NotFoundException;
-use Psr\Container\{
-    ContainerExceptionInterface,
-    ContainerInterface,
-    NotFoundExceptionInterface
-};
+use Psr\Container\{ContainerExceptionInterface, ContainerInterface, NotFoundExceptionInterface};
 use Doctrine\Common\Collections\ArrayCollection;
 use ReflectionException;
 use function spl_object_id;
