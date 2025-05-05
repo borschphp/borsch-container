@@ -34,6 +34,9 @@ class Definition
     /** @var string[] */
     protected array $tags = [];
 
+    /** @var callable */
+    protected $callable = null;
+
     protected ContainerInterface $container;
 
     /**
@@ -127,6 +130,13 @@ class Definition
         return $this;
     }
 
+    public function setCallable(callable $callable): self
+    {
+        $this->callable = $callable;
+
+        return $this;
+    }
+
     /**
      * @param bool $cached
      * @return $this
@@ -159,6 +169,13 @@ class Definition
      */
     public function get(): mixed
     {
+        if ($this->callable !== null) {
+            return call_user_func_array($this->callable, [
+                $this->container->get($this->concrete),
+                $this->container
+            ]);
+        }
+
         if (($this->id == $this->concrete && is_callable($this->concrete)) || is_callable($this->concrete)) {
             return $this->invokeAsCallable();
         }

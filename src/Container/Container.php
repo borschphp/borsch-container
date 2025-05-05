@@ -19,7 +19,7 @@ use function spl_object_id;
 class Container implements ContainerInterface
 {
 
-    /** @var ArrayCollection<string, Definition|DefinitionExtender> $definitions */
+    /** @var ArrayCollection<string, Definition> $definitions */
     protected ArrayCollection $definitions;
 
     protected bool $cache_by_default = false;
@@ -263,7 +263,7 @@ class Container implements ContainerInterface
      * @throws NotFoundException if $from is not found in the container
      * @throws ContainerException if $id is the same as $from
      */
-    public function extend(string $id, callable $callable, string $from): DefinitionExtender
+    public function extend(string $id, callable $callable, string $from): Definition
     {
         if ($id === $from) {
             throw ContainerException::extendingWithSameIdAndFromForbidden($id);
@@ -277,7 +277,9 @@ class Container implements ContainerInterface
             throw NotFoundException::unableToFindEntry($from);
         }
 
-        return $this->definitions[$id] = new DefinitionExtender($id, $callable, $from);
+        $this->definitions[$id] = (new Definition($id, $from))->setCallable($callable);
+
+        return $this->definitions[$id];
     }
 
     /**

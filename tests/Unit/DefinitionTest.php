@@ -5,6 +5,7 @@ use Borsch\Container\Exception\ContainerException;
 use Borsch\Container\Exception\NotFoundException;
 use Borsch\Container\Reference;
 use BorschTest\Assets\Bar;
+use BorschTest\Assets\BarDecorator;
 use BorschTest\Assets\Baz;
 use BorschTest\Assets\Biz;
 use BorschTest\Assets\Ink;
@@ -197,4 +198,13 @@ test('isReference() returns true on Reference concrete', function () {
 test('isReference() returns false on non Reference concrete', function () {
     $definition = new Definition('id', 'test');
     expect($definition->isReference())->toBeFalse();
+});
+
+test('setCallable() is called', function () {
+    $definition = new Definition(BarDecorator::class, Bar::class);
+    $definition = $definition
+        ->setContainer($this->container)
+        ->setCallable(fn(Bar $bar) => new BarDecorator($bar));
+    expect($definition->get())->toBeInstanceOf(BarDecorator::class)
+        ->and($definition->get()->bar)->toBeInstanceOf(Bar::class);
 });
