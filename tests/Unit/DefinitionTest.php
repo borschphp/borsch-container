@@ -3,13 +3,15 @@
 use Borsch\Container\Definition;
 use Borsch\Container\Exception\ContainerException;
 use Borsch\Container\Exception\NotFoundException;
+use Borsch\Container\Reference;
 use BorschTest\Assets\Bar;
+use BorschTest\Assets\BarDecorator;
 use BorschTest\Assets\Baz;
 use BorschTest\Assets\Biz;
-use BorschTest\Assets\ExtendedDefinition;
-use BorschTest\Assets\Foo;
 use BorschTest\Assets\Ink;
 use Psr\Container\ContainerInterface;
+
+covers(Definition::class);
 
 it('adds method', function () {
     $definition = new Definition(Bar::class);
@@ -37,13 +39,13 @@ it('is cached', function () {
 });
 
 test('constructor deals with id and concrete correctly', function () {
-    $definition = new ExtendedDefinition(Bar::class);
-    expect($definition->getId())->toBe(Bar::class);
-    expect($definition->getConcrete())->toBe(Bar::class);
+    $definition = new Definition(Bar::class);
+    expect($definition->getId())->toBe(Bar::class)
+        ->and($definition->getConcrete())->toBe(Bar::class);
 
-    $definition = new ExtendedDefinition(Bar::class, 'test');
-    expect($definition->getId())->toBe(Bar::class);
-    expect($definition->getConcrete())->toBe('test');
+    $definition = new Definition(Bar::class, 'test');
+    expect($definition->getId())->toBe(Bar::class)
+        ->and($definition->getConcrete())->toBe('test');
 });
 
 it('adds parameter', function () {
@@ -71,7 +73,7 @@ it('gets value', function () {
     expect($definition->get())->toBeInstanceOf(Baz::class);
 });
 
-test('definition with a callable concrete throw ContainerException when missing parameters', function() {
+test('definition with a callable concrete throw ContainerException when missing parameters', function () {
     $definition = new Definition('id', fn(int $undefined) => new Baz([$undefined]));
     $definition->setContainer($this->container);
 
@@ -79,14 +81,14 @@ test('definition with a callable concrete throw ContainerException when missing 
 })->throws(
     ContainerException::class,
     sprintf(
-        'Unable to get parameter for callable/closure defined in entry with ID "%s". '.
+        'Unable to get parameter for callable/closure defined in entry with ID "%s". ' .
         'Expected a parameter of type "%s" but could not be found inside the container nor its delegates.',
         'id',
         'int'
     )
 );
 
-test('when definition throw ContainerException, a NotFoundException is thrown previously', function() {
+test('when definition throw ContainerException, a NotFoundException is thrown previously', function () {
     try {
         $definition = new Definition('id', fn(int $undefined) => new Baz([$undefined]));
         $definition->setContainer($this->container);
@@ -124,9 +126,85 @@ test('invoke as class with constructor optional parameters', function () {
         ]);
 });
 
-
 test('invoke as callable throw exception', function () {
     $definition = new Definition('test', [Ink::class, 'getBar']);
     $definition->setContainer($this->container);
     $bar = $definition->get();
-})->throws(NotFoundException::class);
+})->throws(TypeError::class);
+
+test('getId() return ID', function () {
+    $definition = new Definition('test', fn() => 'it is a test');
+    expect($definition->getId())->toBe('test');
+});
+
+test('getConcrete() return concrete', function () {
+    $definition = new Definition('test', fn() => 'it is a test');
+    $concrete = $definition->getConcrete();
+    expect($concrete)->toBeCallable()
+        ->and($concrete())->toBe('it is a test');
+});
+
+test('addParameter() with key', function () {
+    $definition = new class('id', 'concrete') extends Definition {
+        public function getParameters(): array { return $this->parameters; }
+    };
+
+    $definition->addParameter('test', 'key');
+    expect($definition->getParameters())->toBe(['key' => 'test']);
+});
+
+test('addParameters', function () {
+    $definition = new class('id', 'concrete') extends Definition {
+        public function getParameters(): array { return $this->parameters; }
+    };
+
+    $definition->addParameters(['key' => 'test']);
+    expect($definition->getParameters())->toBe(['key' => 'test']);
+});
+
+test('addTag() add tag', function () {
+    $definition = new Definition('id', 'concrete');
+    $definition->addTag('tag1');
+    expect($definition->hasTag('tag1'))->toBeTrue()
+        ->and($definition->hasTag('tag2'))->toBeFalse();
+});
+
+test('addTags() add tags', function () {
+    $definition = new Definition('id', 'concrete');
+    $definition->addTags(['tag1', 'tag2']);
+    expect($definition->hasTag('tag1'))->toBeTrue()
+        ->and($definition->hasTag('tag2'))->toBeTrue()
+        ->and($definition->hasTag('tag3'))->toBeFalse();
+});
+
+test('hasTag() return true if tag exists', function () {
+    $definition = new Definition('id', 'concrete');
+    $definition->addTag('tag1');
+    expect($definition->hasTag('tag1'))->toBeTrue()
+        ->and($definition->hasTag('tag2'))->toBeFalse();
+});
+
+test('hasTag() return false if tag does not exist', function () {
+    $definition = new Definition('id', 'concrete');
+    $definition->addTag('tag1');
+    expect($definition->hasTag('tag2'))->toBeFalse();
+});
+
+test('isReference() returns true on Reference concrete', function () {
+    $definition = new Definition('id', new Reference('test'));
+    expect($definition->isReference())->toBeTrue();
+});
+
+test('isReference() returns false on non Reference concrete', function () {
+    $definition = new Definition('id', 'test');
+    expect($definition->isReference())->toBeFalse();
+});
+
+test('setCallable() is called', function () {
+    $definition = new Definition(BarDecorator::class, Bar::class);
+    $definition = $definition
+        ->setContainer($this->container)
+        ->setCallable(fn(Bar $bar) => new BarDecorator($bar));
+    expect($definition->get())->toBeInstanceOf(BarDecorator::class)
+        ->and($definition->get()->bar)->toBeInstanceOf(Bar::class);
+});
