@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /**
  * @author debuss-a
  */
@@ -176,11 +176,11 @@ class Definition
             ]);
         }
 
-        if (($this->id == $this->concrete && is_callable($this->concrete)) || is_callable($this->concrete)) {
+        if (($this->id === $this->concrete && is_callable($this->concrete)) || is_callable($this->concrete)) {
             return $this->invokeAsCallable();
         }
 
-        if (($this->id == $this->concrete || is_string($this->concrete)) && class_exists($this->concrete)) {
+        if (($this->id === $this->concrete || is_string($this->concrete)) && class_exists($this->concrete)) {
             return $this->invokeAsClass();
         }
 

@@ -1,12 +1,11 @@
-<?php
+<?php declare(strict_types=1);
 /**
  * @author debuss-a
  */
 
 namespace Borsch\Container;
 
-use Borsch\Container\Exception\ContainerException;
-use Borsch\Container\Exception\NotFoundException;
+use Borsch\Container\Exception\{ContainerException, NotFoundException};
 use Psr\Container\{ContainerExceptionInterface, ContainerInterface, NotFoundExceptionInterface};
 use Doctrine\Common\Collections\ArrayCollection;
 use ReflectionException;
@@ -123,6 +122,7 @@ class Container implements ContainerInterface
             return $this->resolveDefinitionCollection($definition);
         }
 
+        /** @var Definition $definition */
         if ($definition->isReference()) {
             return $this->get($definition->getConcrete()->references());
         }
@@ -197,7 +197,8 @@ class Container implements ContainerInterface
      */
     protected function getDelegatedItem(string $id): mixed
     {
-        return $this->delegates
+        return $this
+            ->delegates
             ->findFirst(fn($k, ContainerInterface $container) => $container->has($id))
             ->get($id);
     }
