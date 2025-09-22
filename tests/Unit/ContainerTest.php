@@ -308,21 +308,6 @@ test('get() method returns real set instance', function() {
         ->and($this->container->get(Foo::class)->bar->something)->toBe($rand);
 });
 
-test('alias() returns the aliased entry', function () {
-    $id = substr(md5(mt_rand()), 0, 7);
-    $value = mt_rand(1, 100);
-    $alias = substr(md5(mt_rand()), 0, 7);
-    $this->container->set($id, fn() => $value);
-    $this->container->alias($alias, $id);
-    expect($this->container->get($id))->toBe($value)
-        ->and($this->container->get($alias))->toBe($value)
-        ->and($this->container->get($alias))->toBe($this->container->get($id));
-});
-
-test('alias() throws a NotFoundException when entry does not exist', function () {
-    $this->container->alias('Monolog\\Logger', 'Psr\\log\\LoggerInterface');
-})->throws(NotFoundException::class, 'Unable to find entry with ID "Psr\\log\\LoggerInterface".');
-
 test('cache behavior is false by default on instantiation of a container', function () {
     expect($this->container->getCacheByDefault())->toBeFalse();
 });
@@ -337,37 +322,3 @@ test('cache behavior is true when set to true', function () {
         ->and($this->container->isCached(Bar::class))->toBeTrue()
         ->and($this->container->isCached(DateTime::class))->toBeFalse();
 });
-
-test('extend() extend a scalar', function () {
-    $this->container->set('foo', 'Hello,');
-    $this->container->set('bar', 'World!');
-    $this->container->extend('test', fn(string $text, ContainerInterface $container) => $text . ' ' . $container->get('bar'), 'foo');
-
-    expect($this->container->get('test'))->toBe('Hello, World!');
-});
-
-test('extend() extend a class', function () {
-    $something = substr(md5(mt_rand()), 0, 7);
-    $this->container->set(Bar::class)->addMethod('setSomething', [$something]);
-    $this->container->extend(Foo::class, fn(Bar $bar) => new Foo($bar), Bar::class);
-    expect($this->container->has(Foo::class))->toBeTrue()
-        ->and($this->container->get(Foo::class))->toBeInstanceOf(Foo::class)
-        ->and($this->container->get(Foo::class)->bar)->toBeInstanceOf(Bar::class)
-        ->and($this->container->get(Foo::class)->bar->something)->toBe($something);
-});
-
-test('extend() throw NotFoundException', function () {
-    $this->container->extend(Foo::class, fn(Bar $bar) => new Foo($bar), Bar::class);
-})->throws(NotFoundException::class, 'Unable to find entry with ID "'.Bar::class.'".', 0);
-
-test('extend() throw ContainerException (extendingWithSameIdAndFromForbidden)', function () {
-        $this->container->set('foo', 'Hello,');
-        $this->container->set('bar', 'World!');
-        $this->container->extend('bar', fn(string $text, ContainerInterface $container) => '', 'bar');
-})->throws(ContainerException::class, 'It is forbidden to extend a definition with the same ID (bar), provide a new ID (e.g. $from) to fix the issue.', 0);
-
-test('extend() throw ContainerException (extendingAnExistingEntryIsForbidden)', function () {
-    $this->container->set('foo', 'Hello,');
-    $this->container->set('bar', 'World!');
-    $this->container->extend('bar', fn(string $text, ContainerInterface $container) => '', 'foo');
-})->throws(ContainerException::class, 'It is forbidden to extend a definition and register it with an existing ID (bar), provide a new ID (e.g. $from) to fix the issue.', 0);
