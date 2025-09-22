@@ -51,7 +51,9 @@ class Definition
         protected mixed $concrete = null,
         protected bool $cached = false
     ) {
-        $this->concrete = $concrete === null ? $id : $concrete;
+        $this->concrete = $concrete === null
+            ? $id
+            : $concrete;
     }
 
     public function getId(): string

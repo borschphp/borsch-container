@@ -5,7 +5,7 @@
 
 namespace Borsch\Container;
 
-use Borsch\Container\Exception\{ContainerException, NotFoundException};
+use Borsch\Container\Exception\NotFoundException;
 use Psr\Container\{ContainerExceptionInterface, ContainerInterface, NotFoundExceptionInterface};
 use Doctrine\Common\Collections\ArrayCollection;
 use ReflectionException;
@@ -21,13 +21,13 @@ class Container implements ContainerInterface
     /** @var ArrayCollection<string, Definition> $definitions */
     protected ArrayCollection $definitions;
 
+    /** @var ArrayCollection<int, ContainerInterface> $delegates */
+    protected ArrayCollection $delegates;
+
     protected bool $cache_by_default = false;
 
     /** @var array<string, mixed> $cache */
     protected array $cache = [];
-
-    /** @var ArrayCollection<int, ContainerInterface> $delegates */
-    protected ArrayCollection $delegates;
 
     protected bool $autowire = true;
 
@@ -55,7 +55,7 @@ class Container implements ContainerInterface
      * @param bool $autowire
      * @return self
      */
-    public function setAutowiring(bool $autowire): self
+    public function setAutowiring(bool $autowire = true): self
     {
         $this->autowire = $autowire;
 
@@ -79,7 +79,7 @@ class Container implements ContainerInterface
      * @param bool $cache
      * @return self
      */
-    public function setCacheByDefault(bool $cache): self
+    public function setCacheByDefault(bool $cache = true): self
     {
         $this->cache_by_default = $cache;
 
@@ -154,9 +154,6 @@ class Container implements ContainerInterface
      *
      * @param ArrayCollection<string, Definition> $definitions
      * @return array<string, mixed>
-     * @throws ContainerExceptionInterface
-     * @throws NotFoundExceptionInterface
-     * @throws ReflectionException
      */
     protected function resolveDefinitionCollection(ArrayCollection $definitions): array
     {
@@ -255,35 +252,6 @@ class Container implements ContainerInterface
     }
 
     /**
-     * Extend an existing definition with a callable.
-     *
-     * A new definition will be created with the ID $id in the container.
-     *
-     * @param callable $callable The callable to extend the definition with
-     * @phpstan-param callable(mixed, Container): mixed $callable
-     * @throws NotFoundException if $from is not found in the container
-     * @throws ContainerException if $id is the same as $from
-     */
-    public function extend(string $id, callable $callable, string $from): Definition
-    {
-        if ($id === $from) {
-            throw ContainerException::extendingWithSameIdAndFromForbidden($id);
-        }
-
-        if ($this->has($id)) {
-            throw ContainerException::extendingAnExistingEntryIsForbidden($id);
-        }
-
-        if (!$this->has($from)) {
-            throw NotFoundException::unableToFindEntry($from);
-        }
-
-        $this->definitions[$id] = (new Definition($id, $from))->setCallable($callable);
-
-        return $this->definitions[$id];
-    }
-
-    /**
      * Entrust another PSR-11 container in case of missing a requested entry ID.
      *
      * @param ContainerInterface $container
@@ -296,17 +264,5 @@ class Container implements ContainerInterface
         }
 
         return $this;
-    }
-
-    /**
-     * @throws NotFoundException
-     */
-    public function alias(string $alias, string $from): void
-    {
-        if (!$this->has($from)) {
-            throw NotFoundException::unableToFindEntry($from);
-        }
-
-        $this->set($alias, new Reference($from));
     }
 }
